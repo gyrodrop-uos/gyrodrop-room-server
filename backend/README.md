@@ -41,3 +41,21 @@
 
 - 쉘 스크립트로 돌릴 수 있을 것.
 - 또는 Unity Headless Mode를 켜는 또 다른 매니저를 둔다거나. 왜냐하면 쿠버네티스로 자동으로 띄우게 하려면 어느 정도는 로직 처리가 필요할 것. 이걸 어떻게 라우팅할 것인지도 문제이고.
+
+## 여담
+
+### 타입스크립트 절대경로 설정
+
+타입스크립트 절대경로를 설정 후(`@` 같은 류), tsc 빌드 후 node 실행할 때 모듈을 못 불러 오거나, ts-node 할 때에에도 그러는 경우가 있음. 그럴 땐 아래의 패키지도 설치하고 [여기](https://stackoverflow.com/questions/63744943/absolute-path-in-the-tsconfig-doesnt-work)의 내용을 잘 확인하도록 하자.
+
+- ts-patch
+
+  - Directly patch typescript installation to allow custom transformers (plugins).
+  - The main difference why I prefer ts-patch over ttypescript is that there is no need to change the compiler (ttsc) because (hence the name) tsc is patched.
+
+- typescript-transform-paths
+
+  - Transforms absolute imports to relative from paths in your tsconfig.json.
+
+- tsconfig-paths
+  - Load modules whose location is specified in the paths section of tsconfig.json. Both loading at run-time and via API are supported.
