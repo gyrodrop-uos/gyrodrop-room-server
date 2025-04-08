@@ -12,33 +12,20 @@ interface Repository<T, Q = void> {
   create: (entity: T) => Promise<T>;
   update: (id: string, entity: Partial<T>) => Promise<T>;
   delete: (id: string) => Promise<T>;
-  find: (options: Q) => Promise<{
+  findAll: (options: Q) => Promise<{
     entities: T[];
     total: number;
   }>;
 }
 
-interface PlayerQueryOptions {
+interface CommonQueryOptions {
   page: number;
   pageSize: number;
 }
 
-export interface PlayerRepository extends Repository<Player, PlayerQueryOptions> {}
-
-interface GameStageQueryOptions {
-  page: number;
-  pageSize: number;
-}
-
-export interface GameStageRepository extends Repository<GameStage, GameStageQueryOptions> {}
-
-interface GameRoomQueryOptions {
-  page: number;
-  pageSize: number;
-}
-
-export interface GameRoomRepository extends Repository<GameRoom, GameRoomQueryOptions> {}
-
+export interface PlayerRepository extends Repository<Player, CommonQueryOptions> {}
+export interface GameStageRepository extends Repository<GameStage> {}
+export interface GameRoomRepository extends Repository<GameRoom, CommonQueryOptions> {}
 export interface GameStateRepository extends Repository<GameState> {
   getByGameRoomId: (gameRoomId: string) => Promise<GameState>;
   updateByGameRoomId: (gameRoomId: string, entity: Partial<GameState>) => Promise<GameState>;
