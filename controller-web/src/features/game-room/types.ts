@@ -4,7 +4,7 @@ export interface GyroDTO {
   roll: number;
 }
 
-export interface GameRoomDto {
+export interface GameRoomDTO {
   id: string;
   clientId: string;
   createdAt: string;
@@ -13,13 +13,20 @@ export interface GameRoomDto {
   currentGyro: GyroDTO;
 }
 
-// TODO: 임시로 만들어 둔 상태. 서버측과 정의를 맞추어야 함.
-export enum GameRoomError {
-  NOT_FOUND = "NOT_FOUND",
-  ALREADY_JOINED = "ALREADY_JOINED",
-  NOT_JOINED = "NOT_JOINED",
-  INVALID_AXIS = "INVALID_AXIS",
-  INVALID_GYRO = "INVALID_GYRO",
+export interface GameRoomErrorDTO {
+  message: string;
+  statusCode: number;
+}
+
+export type GameRoomError = "ROOM_NOT_FOUND_ERROR" | "ROOM_ACTION_ERROR" | "ROOM_AUTH_ERROR" | "ROOM_UNKNOWN_ERROR";
+export class GameRoomApiError extends Error {
+  readonly errorType: GameRoomError;
+
+  constructor(errorType: GameRoomError, message?: string) {
+    super(`${errorType}${message ? `: ${message}` : ""}`);
+    this.name = "GameRoomApiError";
+    this.errorType = errorType;
+  }
 }
 
 export interface GameRoomApiClient {

@@ -1,4 +1,4 @@
-import { GameRoomApiClient, GyroDTO } from "./types";
+import { GameRoomApiClient, GyroDTO, GameRoomErrorDTO, GameRoomApiError } from "./types";
 import { Gyro } from "../gyro/types";
 
 export class GameRoomApiClientHttp implements GameRoomApiClient {
@@ -8,22 +8,54 @@ export class GameRoomApiClientHttp implements GameRoomApiClient {
     this._backendUrl = backendUrl;
   }
 
+  private async handleError(res: Response): Promise<void> {
+    let error: GameRoomErrorDTO;
+
+    try {
+      error = await res.json();
+    } catch (error) {
+      throw new GameRoomApiError(
+        "ROOM_UNKNOWN_ERROR", //
+        `Failed to parse error response: ${(error as Error).message}`
+      );
+    }
+
+    switch (error.statusCode) {
+      case 400:
+        throw new GameRoomApiError("ROOM_ACTION_ERROR");
+      case 401:
+        throw new GameRoomApiError("ROOM_AUTH_ERROR");
+      case 404:
+        throw new GameRoomApiError("ROOM_NOT_FOUND_ERROR");
+      default:
+        throw new GameRoomApiError("ROOM_UNKNOWN_ERROR");
+    }
+  }
+
   public async joinRoom(roomId: string, playerId: string, axis: "pitch" | "roll"): Promise<void> {
-    await fetch(`${this._backendUrl}/rooms/${roomId}/join/${axis}`, {
+    const res = await fetch(`${this._backendUrl}/rooms/${roomId}/join/${axis}`, {
       method: "POST",
       headers: {
         "Game-Controller-ID": playerId,
       },
     });
+
+    if (!res.ok) {
+      await this.handleError(res);
+    }
   }
 
   public async leaveRoom(roomId: string, playerId: string, axis: "pitch" | "roll"): Promise<void> {
-    await fetch(`${this._backendUrl}/rooms/${roomId}/leave/${axis}`, {
+    const res = await fetch(`${this._backendUrl}/rooms/${roomId}/leave/${axis}`, {
       method: "POST",
       headers: {
         "Game-Controller-ID": playerId,
       },
     });
+
+    if (!res.ok) {
+      await this.handleError(res);
+    }
   }
 
   public async updateGyro(roomId: string, playerId: string, gyro: Gyro): Promise<void> {
@@ -33,7 +65,7 @@ export class GameRoomApiClientHttp implements GameRoomApiClient {
       roll: gyro.roll,
     };
 
-    await fetch(`${this._backendUrl}/rooms/${roomId}/gyro`, {
+    const res = await fetch(`${this._backendUrl}/rooms/${roomId}/gyro`, {
       method: "POST",
       headers: {
         "Game-Controller-ID": playerId,
@@ -41,11 +73,19 @@ export class GameRoomApiClientHttp implements GameRoomApiClient {
       },
       body: JSON.stringify(data),
     });
+
+    if (!res.ok) {
+      await this.handleError(res);
+    }
   }
 
   public async getCurrentGyro(roomId: string): Promise<Gyro> {
     const res = await fetch(`${this._backendUrl}/rooms/${roomId}/gyro`);
     const gyro = (await res.json()) as GyroDTO;
+
+    if (!res.ok) {
+      await this.handleError(res);
+    }
 
     return {
       pitch: gyro.pitch,

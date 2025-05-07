@@ -9,7 +9,7 @@ import { GyroMockController } from "./gyro-mock";
  * @param browser - Browser name (e.g., 'Safari', 'Chrome', 'Firefox').
  * @returns GyroController instance.
  */
-export function createGyroController(os: string, browser: string): GyroController {
+export function createGyroController(os: string, browser: string, fallback: boolean = false): GyroController {
   os = os.toLowerCase();
   browser = browser.toLowerCase();
 
@@ -19,6 +19,10 @@ export function createGyroController(os: string, browser: string): GyroControlle
     }
   }
 
-  console.warn(`Unsupported OS or browser. Using mock controller. OS: ${os}, Browser: ${browser}`);
-  return new GyroMockController();
+  if (fallback) {
+    console.warn("Fallback to mock gyro controller.");
+    return new GyroMockController();
+  } else {
+    throw new Error(`Unsupported OS or browser. OS: ${os}, Browser: ${browser}`);
+  }
 }
