@@ -1,6 +1,7 @@
 import { Gyro } from "../gyro/types";
-import { GameRoomApiClientHttp } from "./game-room-http";
 import { GameRoomApiClient, GameRoomApiError } from "./types";
+
+import { GameRoomApiClientHybrid } from "./game-room-hybrid";
 
 export type GameRoomState = "init" | "joining" | "joined" | "rejected" | "leaved";
 export type GameRoomEvent = {
@@ -133,7 +134,7 @@ export class GameRoomConnection {
   }
 }
 
-const gameRoomApiClient: GameRoomApiClient = new GameRoomApiClientHttp("http://localhost:3000");
+const gameRoomApiClient: GameRoomApiClient = new GameRoomApiClientHybrid("http://localhost:3000");
 
 export function createGameRoomConnection(
   roomId: string, //
