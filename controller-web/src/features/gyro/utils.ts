@@ -1,6 +1,7 @@
-import { GyroController } from "./types";
+import { GyroAndroidController } from "./gyro-android";
 import { GyroIOSController } from "./gyro-ios";
 import { GyroMockController } from "./gyro-mock";
+import { GyroController } from "./types";
 
 /**
  * Creates an appropriate GyroController instance based on OS and browser.
@@ -17,6 +18,10 @@ export function createGyroController(os: string, browser: string, fallback: bool
     if (browser === "safari") {
       return new GyroIOSController();
     }
+  }
+
+  if (os === "android") {
+    return new GyroAndroidController();
   }
 
   if (fallback) {
