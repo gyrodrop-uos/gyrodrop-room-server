@@ -25,6 +25,10 @@ export class GameRoomService {
    * @returns 게임 룸 ID
    */
   async openRoom(clientId: string): Promise<string> {
+    if (!clientId) {
+      throw new GameRoomActionError("Client ID is invalid.");
+    }
+
     const room = await this.roomRepo.create({ clientId });
     return room.id;
   }
@@ -38,6 +42,13 @@ export class GameRoomService {
    * @returns 게임 룸
    */
   async getRoom(clientId: string, roomId: string): Promise<GameRoom> {
+    if (!clientId) {
+      throw new GameRoomActionError("Client ID is invalid.");
+    }
+    if (!roomId) {
+      throw new GameRoomActionError("Room ID is invalid.");
+    }
+
     const room = await this.roomRepo.getById(roomId);
     if (room.clientId !== clientId) {
       throw new GameRoomAuthError(`Client ID ${clientId} is not authorized to access room ${roomId}`);
@@ -54,6 +65,13 @@ export class GameRoomService {
    * @param roomId 닫을 게임 룸 ID
    */
   async closeRoom(clientId: string, roomId: string): Promise<void> {
+    if (!clientId) {
+      throw new GameRoomActionError("Client ID is invalid.");
+    }
+    if (!roomId) {
+      throw new GameRoomActionError("Room ID is invalid.");
+    }
+
     const room = await this.roomRepo.getById(roomId);
     if (room.clientId !== clientId) {
       throw new GameRoomAuthError(`Client ID ${clientId} is not authorized to close room ${roomId}`);
@@ -71,6 +89,13 @@ export class GameRoomService {
    * @param axis 해제할 자이로 축
    */
   async releaseGyro(clientId: string, roomId: string, axis: GyroAxis): Promise<void> {
+    if (!clientId) {
+      throw new GameRoomActionError("Client ID is invalid.");
+    }
+    if (!roomId) {
+      throw new GameRoomActionError("Room ID is invalid.");
+    }
+
     const room = await this.roomRepo.getById(roomId);
     if (room.clientId !== clientId) {
       throw new GameRoomAuthError(`Client ID ${clientId} is not authorized to release gyro on room ${roomId}`);
@@ -89,13 +114,20 @@ export class GameRoomService {
    * @param axis 플레이어가 맡을 자이로 축
    */
   async joinGyro(controllerId: string, roomId: string, axis: GyroAxis): Promise<void> {
+    if (!controllerId) {
+      throw new GameRoomActionError("Controller ID is invalid.");
+    }
+    if (!roomId) {
+      throw new GameRoomActionError("Room ID is invalid.");
+    }
+
     const room = await this.roomRepo.getById(roomId);
     const gyroHolder = room.getGyroHolder(axis);
     if (gyroHolder === controllerId) {
       return;
     }
     if (gyroHolder !== null) {
-      throw new GameRoomActionError(`Gyro axis ${axis} is already occupied in room ${roomId}`);
+      throw new GameRoomAuthError(`Gyro axis ${axis} is already occupied in room ${roomId}`);
     }
 
     room.dedicateGyro(controllerId, axis);
@@ -110,6 +142,13 @@ export class GameRoomService {
    * @param axis 플레이어가 해제할 자이로 축축
    */
   async leaveGyro(controllerId: string, roomId: string, axis: GyroAxis): Promise<void> {
+    if (!controllerId) {
+      throw new GameRoomActionError("Controller ID is invalid.");
+    }
+    if (!roomId) {
+      throw new GameRoomActionError("Room ID is invalid.");
+    }
+
     const room = await this.roomRepo.getById(roomId);
     const gyroHolder = room.getGyroHolder(axis);
     if (gyroHolder === null) {
@@ -132,6 +171,13 @@ export class GameRoomService {
    * @param gyro 업데이트할 자이로 정보
    */
   async updateGyro(controllerId: string, roomId: string, gyro: Gyro): Promise<void> {
+    if (!controllerId) {
+      throw new GameRoomActionError("Controller ID is invalid.");
+    }
+    if (!roomId) {
+      throw new GameRoomActionError("Room ID is invalid.");
+    }
+
     await this.roomRepo.updateGyroById(roomId, controllerId, gyro);
   }
 
@@ -141,6 +187,10 @@ export class GameRoomService {
    * @param roomId 게임 룸 ID
    */
   public async getCurrentGyro(roomId: string): Promise<Gyro> {
+    if (!roomId) {
+      throw new GameRoomActionError("Room ID is invalid.");
+    }
+
     return this.roomRepo.getGyroById(roomId);
   }
 }
