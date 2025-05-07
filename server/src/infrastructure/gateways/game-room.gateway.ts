@@ -1,9 +1,9 @@
 import { Inject } from "@nestjs/common";
 import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway } from "@nestjs/websockets";
 
-import { Gyro } from "@/interfaces/models";
-import { GameRoomService } from "@/interfaces/services";
+import { GameRoomService } from "@/services/game-room.service";
 import { Socket } from "socket.io";
+import { GyroDTO } from "../dto/game-room.dto";
 
 @WebSocketGateway({ cors: true })
 export class GameRoomGateway {
@@ -14,13 +14,13 @@ export class GameRoomGateway {
 
   @SubscribeMessage("update-gyro")
   async handleGyroUpdate(
-    @MessageBody() payload: { playerId: string; roomId: string; gyro: Gyro },
+    @MessageBody() payload: { cid: string; rid: string; g: GyroDTO }, //
     @ConnectedSocket() client: Socket
   ) {
     try {
-      await this.gameRoomService.updateGyro(payload.playerId, payload.roomId, payload.gyro);
+      await this.gameRoomService.updateGyro(payload.cid, payload.rid, payload.g);
     } catch (error) {
-      client.emit("gyro-error", { message: (error as Error).message });
+      client.emit("update-gyro-error", { message: (error as Error).message });
     }
   }
 }

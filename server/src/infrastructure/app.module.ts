@@ -5,6 +5,7 @@ import { GameRoomService } from "@/services/game-room.service";
 
 import { Module } from "@nestjs/common";
 import { GameRoomController } from "./controllers/game-room.controller";
+import { GameRoomGateway } from "./gateways/game-room.gateway";
 
 type CustomProvider<T> = {
   provide: string;
@@ -28,6 +29,6 @@ const gameRoomProvider: CustomProvider<GameRoomService> = {
 
 @Module({
   controllers: [GameRoomController],
-  providers: [gameRoomProvider],
+  providers: [gameRoomProvider, GameRoomGateway],
 })
 export class AppModule {}
