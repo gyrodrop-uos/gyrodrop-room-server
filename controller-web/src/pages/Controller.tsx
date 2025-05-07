@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useSearchParams } from "react-router";
+
 import { gameRoomApiClient } from "../features/game-room";
 import { createGyroController } from "../features/gyro/utils";
-import { getUserAgent } from "../features/user-agent";
 
-const userAgent = getUserAgent();
+import { whoami } from "../features/whoami";
+const my = whoami();
 
 export const Controller = () => {
   const [searchParams] = useSearchParams();
@@ -32,15 +33,15 @@ export const Controller = () => {
       }
 
       console.log("Joining room with ID:", roomId);
-      await gameRoomApiClient.joinRoom(roomId, userAgent.id, axis);
+      await gameRoomApiClient.joinRoom(roomId, my.id, axis);
 
       console.log("Creating GyroController");
-      const gyroController = createGyroController(userAgent.os, userAgent.browser);
+      const gyroController = createGyroController(my.os, my.browser);
       await gyroController.initialize();
 
       setInterval(async () => {
         const gyro = gyroController.getGyro();
-        await gameRoomApiClient.updateGyro(roomId, userAgent.id, gyro);
+        await gameRoomApiClient.updateGyro(roomId, my.id, gyro);
       }, 1000);
     })();
   }, [roomId, axis]);

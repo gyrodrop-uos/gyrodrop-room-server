@@ -6,6 +6,8 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import { Controller } from "./pages/Controller";
 import { Landing } from "./pages/Landing";
 
+import "./index.css";
+
 const queryClient = new QueryClient();
 
 createRoot(document.getElementById("root")!).render(
