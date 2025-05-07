@@ -14,7 +14,7 @@ export function createGyroController(os: string, browser: string, fallback: bool
   os = os.toLowerCase();
   browser = browser.toLowerCase();
 
-  if (os === "ios") {
+  if (os === "ios" || os === "macos") {
     if (browser === "safari") {
       return new GyroIOSController();
     }
