@@ -1,51 +1,32 @@
 import { Gyro, GyroController } from "./types";
 
 export class GyroMockController implements GyroController {
-  private base: Gyro = {
-    pitch: 0,
-    yaw: 0,
-    roll: 0,
-  };
+  private _gyro: Gyro;
+  private _speed: number;
 
-  private gyro: Gyro = {
-    pitch: 0,
-    yaw: 0,
-    roll: 0,
-  };
+  constructor(speed: number = 10) {
+    this._gyro = {
+      pitch: 0,
+      yaw: 0,
+      roll: 0,
+    };
+    this._speed = speed;
+  }
 
   public initialize(): Promise<void> {
+    const t = 1 / 30; // 30 FPS, 0.033 seconds
+
     setInterval(() => {
       // Simulate gyro data
-      this.gyro.pitch += Math.random() * 0.1 - 0.05;
-      this.gyro.yaw += Math.random() * 0.1 - 0.05;
-      this.gyro.roll += Math.random() * 0.1 - 0.05;
-
-      // Clamp values to a reasonable range
-      this.gyro.pitch = Math.max(-180, Math.min(180, this.gyro.pitch));
-      this.gyro.yaw = Math.max(-180, Math.min(180, this.gyro.yaw));
-      this.gyro.roll = Math.max(-180, Math.min(180, this.gyro.roll));
-    }, 1000 / 60); // 60 FPS
+      this._gyro.pitch = (this._gyro.pitch + this._speed * t) % 360;
+      this._gyro.yaw = (this._gyro.yaw + this._speed * t) % 360;
+      this._gyro.roll = (this._gyro.roll + this._speed * t) % 360;
+    }, t * 1000);
 
     return Promise.resolve();
   }
 
-  public setBase(gyro: Gyro): void {
-    this.base = gyro;
-  }
-
-  public getBase(): Gyro {
-    return this.base;
-  }
-
-  public getRaw(): Promise<Gyro> {
-    return Promise.resolve(this.gyro);
-  }
-
-  public getDelta(): Promise<Gyro> {
-    return Promise.resolve({
-      pitch: this.gyro.pitch - this.base.pitch,
-      yaw: this.gyro.yaw - this.base.yaw,
-      roll: this.gyro.roll - this.base.roll,
-    });
+  public getGyro(): Gyro {
+    return this._gyro;
   }
 }

@@ -11,10 +11,5 @@ export interface GyroController {
    * to ensure that the gyro data is ready.
    */
   initialize(): Promise<void>;
-
-  setBase(gyro: Gyro): void;
-  getBase(): Gyro;
-
-  getRaw(): Promise<Gyro>;
-  getDelta(): Promise<Gyro>;
+  getGyro(): Gyro;
 }
