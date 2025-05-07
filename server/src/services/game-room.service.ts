@@ -1,160 +1,146 @@
 import { GameRoomActionError, GameRoomAuthError } from "@/errors";
-import { GameRoom, GameState, Gyro } from "@/interfaces/models";
-import { GameRoomRepository, GameStageRepository, GameStateRepository, PlayerRepository } from "@/interfaces/repositories";
-import { GameRoomService } from "@/interfaces/services";
+import { GameRoom, Gyro, GyroAxis } from "@/interfaces/models";
+import { GameRoomRepository } from "@/interfaces/repositories";
 
-import { v4 as uuidv4 } from "uuid";
+/**
+ * 게임 룸 서비스 구현체
+ *
+ * - 게임 룸을 생성하고 관리하는 서비스
+ * - 게임 클라이언트 ID(`clientId`)는 일종의 대칭키처럼 사용된다.
+ * - 게임 클라이언트 ID는 Unity 게임 내에서 생성된 GUID이다.
+ * - 컨트롤러 ID(`controllerId`)는 게임 룸에 입장한 컨트롤러의 ID이며, 플레이어가 게임 룸에 입장할 때 사용된다.
+ * - 컨트롤러 ID는 컨트롤러 앱에서 생성한 임의의 UUID이다.
+ */
+export class GameRoomService {
+  private roomRepo: GameRoomRepository;
 
-export class GameRoomServiceImpl implements GameRoomService {
-  private playerRepo: PlayerRepository;
-  private gameStageRepo: GameStageRepository;
-  private gameRoomRepo: GameRoomRepository;
-  private gameStateRepo: GameStateRepository;
-
-  private gameStateWatcherId: string;
-
-  constructor(
-    repos: {
-      playerRepo: PlayerRepository;
-      gameStageRepo: GameStageRepository;
-      gameRoomRepo: GameRoomRepository;
-      gameStateRepo: GameStateRepository;
-    },
-    params: { gameStateWatcherId: string }
-  ) {
-    this.playerRepo = repos.playerRepo;
-    this.gameStageRepo = repos.gameStageRepo;
-    this.gameRoomRepo = repos.gameRoomRepo;
-    this.gameStateRepo = repos.gameStateRepo;
-
-    this.gameStateWatcherId = params.gameStateWatcherId;
+  constructor(di: { gameRoomRepo: GameRoomRepository }) {
+    this.roomRepo = di.gameRoomRepo;
   }
 
-  public async openRoom(playerId: string, gameStageId: string): Promise<GameRoom> {
-    const player = await this.playerRepo.getById(playerId);
-    const gameStage = await this.gameStageRepo.getById(gameStageId);
-    const gameRoom = await this.gameRoomRepo.create({
-      id: uuidv4(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      status: "waiting",
-      stageId: gameStage.id,
-      playerIds: [player.id],
-    });
-
-    return gameRoom;
+  /**
+   * 게임 룸을 생성한다.
+   *
+   * @param clientId 게임 클라이언트 ID
+   * @returns 게임 룸 ID
+   */
+  async openRoom(clientId: string): Promise<string> {
+    const room = await this.roomRepo.create({ clientId });
+    return room.id;
   }
 
-  public async joinRoom(playerId: string, gameRoomId: string): Promise<GameRoom> {
-    const player = await this.playerRepo.getById(playerId);
-    let gameRoom = await this.gameRoomRepo.getById(gameRoomId);
-
-    if (gameRoom.status !== "waiting") {
-      throw new GameRoomActionError("The game room is not in waiting state.");
-    }
-    if (gameRoom.playerIds.includes(player.id)) {
-      throw new GameRoomActionError("The player is already in the game room.");
-    }
-
-    gameRoom = await this.gameRoomRepo.update(gameRoom.id, {
-      playerIds: [...gameRoom.playerIds, player.id],
-    });
-
-    // Start the game if there are enough players
-    if (gameRoom.playerIds.length >= 2) {
-      gameRoom = await this.gameRoomRepo.update(gameRoom.id, {
-        status: "playing",
-      });
-      await this.gameStateRepo.create({
-        id: uuidv4(),
-        gameRoomId: gameRoom.id,
-        pitchHolderId: null,
-        rollHolderId: null,
-        currentGyro: { pitch: 0, yaw: 0, roll: 0 },
-      });
+  /**
+   * 게임 룸을 가져온다.
+   * - 게임 룸을 만든 클라이언트만 해당 정보에 접근할 수 있다.
+   *
+   * @param clientId 게임 클라이언트 GUID
+   * @param roomId 게임 룸 ID
+   * @returns 게임 룸
+   */
+  async getRoom(clientId: string, roomId: string): Promise<GameRoom> {
+    const room = await this.roomRepo.getById(roomId);
+    if (room.clientId !== clientId) {
+      throw new GameRoomAuthError(`Client ID ${clientId} is not authorized to access room ${roomId}`);
     }
 
-    return gameRoom;
+    return room;
   }
 
-  public async getRoom(playerId: string, gameRoomId: string): Promise<GameRoom> {
-    const player = await this.playerRepo.getById(playerId);
-    const gameRoom = await this.gameRoomRepo.getById(gameRoomId);
-    if (!gameRoom.playerIds.includes(player.id)) {
-      throw new GameRoomAuthError();
+  /**
+   * 게임 룸을 닫는다.
+   * - 게임 룸을 만든 클라이언트만 게임 룸을 닫을 수 있다.
+   *
+   * @param clientId 게임 클라이언트 GUID
+   * @param roomId 닫을 게임 룸 ID
+   */
+  async closeRoom(clientId: string, roomId: string): Promise<void> {
+    const room = await this.roomRepo.getById(roomId);
+    if (room.clientId !== clientId) {
+      throw new GameRoomAuthError(`Client ID ${clientId} is not authorized to close room ${roomId}`);
     }
-    return gameRoom;
+
+    await this.roomRepo.delete(roomId);
   }
 
-  public async closeRoom(playerId: string, gameRoomId: string): Promise<void> {
-    const player = await this.playerRepo.getById(playerId);
-    const gameRoom = await this.gameRoomRepo.getById(gameRoomId);
-    if (!gameRoom.playerIds.includes(player.id)) {
-      throw new GameRoomAuthError();
+  /**
+   * 게임 클라이언트가 게임 룸에서 특정 자이로 축의 점유 권한을 해제한다.
+   * - 게임 룸의 소유자(클라이언트)만 자이로 축을 해제할 수 있다.
+   *
+   * @param clientId 게임 클라이언트 GUID
+   * @param roomId 자이로 컨트롤러를 해제할 게임 룸 ID
+   * @param axis 해제할 자이로 축
+   */
+  async releaseGyro(clientId: string, roomId: string, axis: GyroAxis): Promise<void> {
+    const room = await this.roomRepo.getById(roomId);
+    if (room.clientId !== clientId) {
+      throw new GameRoomAuthError(`Client ID ${clientId} is not authorized to release gyro on room ${roomId}`);
     }
 
-    try {
-      await this.gameStateRepo.deleteByGameRoomId(gameRoomId);
-    } catch (err) {} // Ignore error if game state is not found
-
-    await this.gameRoomRepo.update(gameRoom.id, {
-      status: "finished",
-    });
+    room.releaseGyro(axis);
+    await this.roomRepo.update(room);
   }
 
-  public async getGameState(playerId: string, gameRoomId: string): Promise<GameState> {
-    const gameState = await this.gameStateRepo.getByGameRoomId(gameRoomId);
-    if (playerId === this.gameStateWatcherId) {
-      // For low latency, the game state watcher can access the game state without checking the player ID.
-      return gameState;
+  /**
+   * 컨트롤러(플레이어)가 게임 룸의 자이로 컨트롤러로 입장한다.
+   * - 이미 점유된 자이로 축에 대해 입장할 수 없다.
+   *
+   * @param controllerId 컨트롤러 ID
+   * @param roomId 게임 룸 ID
+   * @param axis 플레이어가 맡을 자이로 축
+   */
+  async joinGyro(controllerId: string, roomId: string, axis: GyroAxis): Promise<void> {
+    const room = await this.roomRepo.getById(roomId);
+    const gyroHolder = room.getGyroHolder(axis);
+    if (gyroHolder === controllerId) {
+      return;
+    }
+    if (gyroHolder !== null) {
+      throw new GameRoomActionError(`Gyro axis ${axis} is already occupied in room ${roomId}`);
     }
 
-    const gameRoom = await this.gameRoomRepo.getById(gameRoomId);
-    if (!gameRoom.playerIds.includes(playerId)) {
-      throw new GameRoomAuthError();
-    }
-    return gameState;
+    room.dedicateGyro(controllerId, axis);
+    await this.roomRepo.update(room);
   }
 
-  public async updateGyro(playerId: string, gameRoomId: string, gyro: Gyro): Promise<void> {
-    const gameState = await this.gameStateRepo.getByGameRoomId(gameRoomId);
-
-    if (gameState.pitchHolderId === playerId) {
-      gameState.currentGyro.pitch = gyro.pitch;
-    } else if (gameState.rollHolderId === playerId) {
-      gameState.currentGyro.roll = gyro.roll;
-    } else {
-      throw new GameRoomAuthError();
+  /**
+   * 플레이어가 게임 룸에서 자발적으로 퇴장한다.
+   *
+   * @param controllerId 컨트롤러 ID
+   * @param roomId 게임 룸 ID
+   * @param axis 플레이어가 해제할 자이로 축축
+   */
+  async leaveGyro(controllerId: string, roomId: string, axis: GyroAxis): Promise<void> {
+    const room = await this.roomRepo.getById(roomId);
+    const gyroHolder = room.getGyroHolder(axis);
+    if (gyroHolder === null) {
+      throw new GameRoomActionError(`Gyro axis ${axis} is not occupied in room ${roomId}`);
+    }
+    if (gyroHolder !== controllerId) {
+      throw new GameRoomAuthError(`Controller ID ${controllerId} is not authorized to leave gyro on room ${roomId}`);
     }
 
-    await this.gameStateRepo.updateByGameRoomId(gameRoomId, gameState);
+    room.releaseGyro(axis);
+    await this.roomRepo.update(room);
   }
 
-  public async takeGyroAxis(playerId: string, gameRoomId: string, axis: "pitch" | "roll"): Promise<GameState> {
-    const gameRoom = await this.gameRoomRepo.getById(gameRoomId);
-    if (!gameRoom.playerIds.includes(playerId)) {
-      throw new GameRoomAuthError();
-    }
+  /**
+   * 게임 룸의 자이로 정보를 갱신한다.
+   * - 이 메서드는 빠르게 자주 호출되므로, 효율적인 처리가 필요하다.
+   *
+   * @param controllerId 컨트롤러 ID
+   * @param roomId 게임 룸 ID
+   * @param gyro 업데이트할 자이로 정보
+   */
+  async updateGyro(controllerId: string, roomId: string, gyro: Gyro): Promise<void> {
+    await this.roomRepo.updateGyroById(roomId, controllerId, gyro);
+  }
 
-    const gameState = await this.gameStateRepo.getByGameRoomId(gameRoomId);
-
-    // if axis is already taken by another player, exchange the axis
-    if (axis === "pitch") {
-      const prevPitchHolderId = gameState.pitchHolderId;
-      gameState.pitchHolderId = playerId;
-      if (prevPitchHolderId) {
-        gameState.rollHolderId = prevPitchHolderId;
-      }
-    } else if (axis === "roll") {
-      const prevRollHolderId = gameState.rollHolderId;
-      gameState.rollHolderId = playerId;
-      if (prevRollHolderId) {
-        gameState.pitchHolderId = prevRollHolderId;
-      }
-    } else {
-      throw new GameRoomActionError("Invalid axis.");
-    }
-
-    return this.gameStateRepo.updateByGameRoomId(gameRoomId, gameState);
+  /**
+   * 게임 룸의 자이로 정보를 가져온다.
+   *
+   * @param roomId 게임 룸 ID
+   */
+  public async getCurrentGyro(roomId: string): Promise<Gyro> {
+    return this.roomRepo.getGyroById(roomId);
   }
 }

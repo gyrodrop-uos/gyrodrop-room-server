@@ -2,19 +2,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsIn, IsNotEmpty } from "class-validator";
 
-export class GameRoomBaseDto {
-  @ApiProperty()
-  @IsNotEmpty()
-  playerId!: string;
-}
-
-export class GameRoomOpenDto extends GameRoomBaseDto {
-  @ApiProperty()
-  @IsNotEmpty()
-  stageId!: string;
-}
-
-export class UpdateGyroDto {
+export class GyroDTO {
   @ApiProperty()
   @IsNotEmpty()
   @Type(() => Number)
@@ -31,10 +19,22 @@ export class UpdateGyroDto {
   roll!: number;
 }
 
-export class TakeGyroAxisDto extends GameRoomBaseDto {
-  @ApiProperty({ enum: ["pitch", "roll"] })
-  @IsNotEmpty()
-  @IsIn(["pitch", "roll"])
-  @Type(() => String)
-  axis!: "pitch" | "roll";
+export class GameRoomDTO {
+  @ApiProperty({ example: "123e4567-e89b-12d3-a456-426614174000" })
+  id!: string;
+
+  @ApiProperty({ example: "123e4567-e89b-12d3-a456-426614174000" })
+  clientId!: string;
+
+  @ApiProperty({ type: String, example: new Date().toISOString() })
+  createdAt!: Date;
+
+  @ApiProperty({ type: String, nullable: true, example: null })
+  pitchHolderId!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, example: null })
+  rollHolderId!: string | null;
+
+  @ApiProperty({ type: () => GyroDTO })
+  currentGyro!: GyroDTO;
 }

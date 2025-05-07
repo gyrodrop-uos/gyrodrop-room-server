@@ -1,33 +1,19 @@
-import { GameRoom, GameStage, GameState, Player } from "./models";
+import { GameRoom, Gyro } from "./models";
 
 /**
- * Repository interface for CRUD operations.
- * If the entity of the specified id is not found, each method will throw an error(NotFoundError).
+ * GameRoom Repository
  *
- * @template T - The type of the entity.
- * @template Q - The type of the query options.
+ * - GameRoom 엔터티의 생성, 조회, 갱신, 삭제를 담당합니다.
+ * - 엔터티를 찾을 수 없는 경우에 `EntityNotFoundError` 예외가 발생됩니다.
+ * - 생성(`create`), 조회(`getById`), 갱신(`update`) 메서드는 엔티티의 복사본을 반환합니다.
+ * - Gyro 관련 연산은 고속으로 처리하기 위해 `getGyroById`와 `updateGyroById` 메서드를 제공합니다.
  */
-interface Repository<T, Q = void> {
-  getById: (id: string) => Promise<T>;
-  create: (entity: T) => Promise<T>;
-  update: (id: string, entity: Partial<T>) => Promise<T>;
-  delete: (id: string) => Promise<T>;
-  findAll: (options: Q) => Promise<{
-    entities: T[];
-    total: number;
-  }>;
-}
+export interface GameRoomRepository {
+  create(params: { clientId: string }): Promise<GameRoom>;
+  getById(id: string): Promise<GameRoom>;
+  update(gameRoom: GameRoom): Promise<GameRoom>;
+  delete(id: string): Promise<void>;
 
-interface CommonQueryOptions {
-  page: number;
-  pageSize: number;
-}
-
-export interface PlayerRepository extends Repository<Player, CommonQueryOptions> {}
-export interface GameStageRepository extends Repository<GameStage> {}
-export interface GameRoomRepository extends Repository<GameRoom, CommonQueryOptions> {}
-export interface GameStateRepository extends Repository<GameState> {
-  getByGameRoomId: (gameRoomId: string) => Promise<GameState>;
-  updateByGameRoomId: (gameRoomId: string, entity: Partial<GameState>) => Promise<GameState>;
-  deleteByGameRoomId: (gameRoomId: string) => Promise<GameState>;
+  getGyroById(id: string): Promise<Gyro>;
+  updateGyroById(id: string, controllerId: string, gyro: Gyro): Promise<void>;
 }
