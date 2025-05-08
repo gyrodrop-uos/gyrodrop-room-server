@@ -20,12 +20,12 @@ export function createGyroController(os: string, browser: string, fallback: bool
     }
   }
 
-  if (os === "android") {
+  if (os === "android" || os === "linux") {
     return new GyroAndroidController();
   }
 
   if (fallback) {
-    console.warn("Fallback to mock gyro controller.");
+    window.alert("Fallback to mock gyro controller.");
     return new GyroMockController();
   } else {
     throw new Error(`Unsupported OS or browser. OS: ${os}, Browser: ${browser}`);

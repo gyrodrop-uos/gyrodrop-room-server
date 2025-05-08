@@ -73,7 +73,9 @@ export class GameRoom {
 
   public updateGyro(gyro: Gyro, controllerId?: string) {
     if (controllerId === undefined) {
-      this._currentGyro = gyro;
+      this._currentGyro.pitch = gyro.pitch;
+      this._currentGyro.yaw = gyro.yaw;
+      this._currentGyro.roll = gyro.roll;
       return;
     }
 

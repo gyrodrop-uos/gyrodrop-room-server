@@ -134,7 +134,7 @@ export class GameRoomConnection {
   }
 }
 
-const gameRoomApiClient: GameRoomApiClient = new GameRoomApiClientHybrid("http://localhost:3000");
+const gameRoomApiClient: GameRoomApiClient = new GameRoomApiClientHybrid("https://server.gyrodrop.xyz");
 
 export function createGameRoomConnection(
   roomId: string, //
