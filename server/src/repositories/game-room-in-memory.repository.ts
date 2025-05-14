@@ -1,6 +1,9 @@
+import { GameRoom } from "@/models/game-room";
+import { Gyro } from "@/models/gyro";
+
 import { EntityNotFoundError } from "@/errors";
-import { GameRoom, Gyro } from "@/interfaces/models";
 import { GameRoomRepository } from "@/interfaces/repositories";
+
 import { v4 as uuidv4 } from "uuid";
 
 export class GameRoomInMemoryRepository implements GameRoomRepository {

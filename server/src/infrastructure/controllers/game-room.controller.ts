@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Headers, Inject, Param, Post } from "@nestjs/common";
 
-import { GyroAxis } from "@/interfaces/models";
+import { GyroAxis } from "@/models/gyro";
 import { GameRoomService } from "@/services/game-room.service";
 import { ApiOkResponse, ApiParam, ApiTags } from "@nestjs/swagger";
 import { GameRoomDTO, GyroDTO } from "../dto/game-room.dto";

@@ -1,7 +1,7 @@
 import { Inject } from "@nestjs/common";
 import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway } from "@nestjs/websockets";
 
-import { Gyro } from "@/interfaces/models";
+import { Gyro } from "@/models/gyro";
 import { GameRoomService } from "@/services/game-room.service";
 import { Socket } from "socket.io";
 import { GyroDTO } from "../dto/game-room.dto";

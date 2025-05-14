@@ -1,5 +1,7 @@
+import { GameRoom } from "@/models/game-room";
+import { Gyro, GyroAxis } from "@/models/gyro";
+
 import { GameRoomActionError, GameRoomAuthError } from "@/errors";
-import { GameRoom, Gyro, GyroAxis } from "@/interfaces/models";
 import { GameRoomRepository } from "@/interfaces/repositories";
 
 /**

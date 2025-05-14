@@ -1,4 +1,5 @@
-import { GameRoom, Gyro } from "./models";
+import { GameRoom } from "@/models/game-room";
+import { Gyro } from "@/models/gyro";
 
 /**
  * GameRoom Repository
