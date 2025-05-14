@@ -2,7 +2,8 @@ import { Gyro, GyroAxis } from "./gyro";
 
 export class GameRoom {
   readonly id: string;
-  readonly clientId: string;
+  // 2025.05.14. make clientId multi-tenant to support multiple clients
+  readonly clientIds: string[];
   readonly createdAt: Date;
 
   private _pitchHolderId: string | null;
@@ -11,14 +12,14 @@ export class GameRoom {
 
   constructor(params: {
     id: string; //
-    clientId: string;
+    clientIds: string[];
     createdAt?: Date;
     pitchHolderId?: string;
     rollHolderId?: string;
     currentGyro?: Gyro;
   }) {
     this.id = params.id;
-    this.clientId = params.clientId;
+    this.clientIds = params.clientIds;
     this.createdAt = params.createdAt ?? new Date();
 
     this._pitchHolderId = params.pitchHolderId ?? null;
@@ -71,10 +72,18 @@ export class GameRoom {
     return this._currentGyro;
   }
 
+  public isClientIn(clientId: string): boolean {
+    return this.clientIds.includes(clientId);
+  }
+
+  public isHost(clientId: string): boolean {
+    return this.clientIds[0] === clientId;
+  }
+
   public copy(): GameRoom {
     return new GameRoom({
       id: this.id,
-      clientId: this.clientId,
+      clientIds: [...this.clientIds],
       createdAt: this.createdAt,
       pitchHolderId: this._pitchHolderId ?? undefined,
       rollHolderId: this._rollHolderId ?? undefined,

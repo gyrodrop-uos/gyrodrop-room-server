@@ -52,7 +52,7 @@ export class GameRoomService {
     }
 
     const room = await this.roomRepo.getById(roomId);
-    if (room.clientId !== clientId) {
+    if (!room.isClientIn(clientId)) {
       throw new GameRoomAuthError(`Client ID ${clientId} is not authorized to access room ${roomId}`);
     }
 
@@ -75,7 +75,7 @@ export class GameRoomService {
     }
 
     const room = await this.roomRepo.getById(roomId);
-    if (room.clientId !== clientId) {
+    if (!room.isHost(clientId)) {
       throw new GameRoomAuthError(`Client ID ${clientId} is not authorized to close room ${roomId}`);
     }
 
@@ -99,7 +99,7 @@ export class GameRoomService {
     }
 
     const room = await this.roomRepo.getById(roomId);
-    if (room.clientId !== clientId) {
+    if (!room.isClientIn(clientId)) {
       throw new GameRoomAuthError(`Client ID ${clientId} is not authorized to release gyro on room ${roomId}`);
     }
 

@@ -31,7 +31,7 @@ export class GameRoomController {
     const currentGyro = room.getCurrentGyro();
     return {
       id: room.id,
-      clientId: room.clientId,
+      clientIds: [...room.clientIds],
       createdAt: room.createdAt,
       pitchHolderId: room.getGyroHolder(GyroAxis.Pitch),
       rollHolderId: room.getGyroHolder(GyroAxis.Roll),
