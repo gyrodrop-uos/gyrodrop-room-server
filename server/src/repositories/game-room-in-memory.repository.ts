@@ -12,7 +12,7 @@ export class GameRoomInMemoryRepository implements GameRoomRepository {
   public async create(params: { clientId: string }): Promise<GameRoom> {
     const gameRoom = new GameRoom({
       id: uuidv4(),
-      clientIds: [params.clientId],
+      hostId: params.clientId,
     });
     this.gameRooms.set(gameRoom.id, gameRoom);
     return gameRoom.copy();

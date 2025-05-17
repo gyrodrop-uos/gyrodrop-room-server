@@ -1,30 +1,57 @@
+import { GameRoomFullError } from "@/errors/game-room.error";
 import { Gyro, GyroAxis } from "./gyro";
 
 export class GameRoom {
   readonly id: string;
-  // 2025.05.14. make clientId multi-tenant to support multiple clients
-  readonly clientIds: string[];
+  readonly hostId: string;
   readonly createdAt: Date;
 
+  private _guestId: string | null;
   private _pitchHolderId: string | null;
   private _rollHolderId: string | null;
   private _currentGyro: Gyro;
 
   constructor(params: {
     id: string; //
-    clientIds: string[];
+    hostId: string;
+    guestId?: string;
     createdAt?: Date;
     pitchHolderId?: string;
     rollHolderId?: string;
     currentGyro?: Gyro;
   }) {
     this.id = params.id;
-    this.clientIds = params.clientIds;
+    this.hostId = params.hostId;
     this.createdAt = params.createdAt ?? new Date();
 
+    this._guestId = params.guestId ?? null;
     this._pitchHolderId = params.pitchHolderId ?? null;
     this._rollHolderId = params.rollHolderId ?? null;
     this._currentGyro = params.currentGyro ?? Gyro.zero;
+  }
+
+  get guestId(): string | null {
+    return this._guestId;
+  }
+
+  public join(clientId: string) {
+    if (this._guestId === null) {
+      this._guestId = clientId;
+    } else {
+      throw new GameRoomFullError();
+    }
+  }
+
+  public kick(): boolean {
+    if (this._guestId !== null) {
+      this._guestId = null;
+      return true;
+    }
+    return false;
+  }
+
+  public isFull(): boolean {
+    return this._guestId !== null;
   }
 
   public getGyroHolder(axis: GyroAxis): string | null {
@@ -73,17 +100,25 @@ export class GameRoom {
   }
 
   public isClientIn(clientId: string): boolean {
-    return this.clientIds.includes(clientId);
+    if (this.hostId === clientId) {
+      return true;
+    }
+    if (this._guestId === clientId) {
+      return true;
+    }
+
+    return false;
   }
 
   public isHost(clientId: string): boolean {
-    return this.clientIds[0] === clientId;
+    return this.hostId === clientId;
   }
 
   public copy(): GameRoom {
     return new GameRoom({
       id: this.id,
-      clientIds: [...this.clientIds],
+      hostId: this.hostId,
+      guestId: this._guestId ?? undefined,
       createdAt: this.createdAt,
       pitchHolderId: this._pitchHolderId ?? undefined,
       rollHolderId: this._rollHolderId ?? undefined,

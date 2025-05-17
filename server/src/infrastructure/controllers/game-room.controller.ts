@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Inject, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Headers, Inject, Param, Post, Query } from "@nestjs/common";
 
 import { GyroAxis } from "@/models/gyro";
 import { GameRoomService } from "@/services/game-room.service";
@@ -31,7 +31,8 @@ export class GameRoomController {
     const currentGyro = room.getCurrentGyro();
     return {
       id: room.id,
-      clientIds: [...room.clientIds],
+      hostId: room.hostId,
+      guestId: room.guestId,
       createdAt: room.createdAt,
       pitchHolderId: room.getGyroHolder(GyroAxis.Pitch),
       rollHolderId: room.getGyroHolder(GyroAxis.Roll),
@@ -41,6 +42,15 @@ export class GameRoomController {
         roll: currentGyro.roll,
       },
     };
+  }
+
+  @Post(":roomId/join")
+  async joinRoom(
+    @Param("roomId") roomId: string, //
+    @Query("hostId") hostId: string,
+    @Headers("game-client-id") clientId: string
+  ) {
+    await this.gameRoomSrv.joinRoom(clientId, hostId, roomId);
   }
 
   @Post(":roomId/close")

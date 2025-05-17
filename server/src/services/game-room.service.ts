@@ -1,7 +1,12 @@
 import { GameRoom } from "@/models/game-room";
 import { Gyro, GyroAxis } from "@/models/gyro";
 
-import { GameRoomActionError, GameRoomAuthError } from "@/errors";
+import {
+  GameRoomActionError,
+  GameRoomAuthError,
+  GameRoomFullError,
+  GameRoomInvalidParameterError,
+} from "@/errors/game-room.error";
 import { GameRoomRepository } from "@/interfaces/repositories";
 
 /**
@@ -28,7 +33,7 @@ export class GameRoomService {
    */
   async openRoom(clientId: string): Promise<string> {
     if (!clientId) {
-      throw new GameRoomActionError("Client ID is invalid.");
+      throw new GameRoomInvalidParameterError();
     }
 
     const room = await this.roomRepo.create({ clientId });
@@ -37,26 +42,44 @@ export class GameRoomService {
 
   /**
    * 게임 룸을 가져온다.
-   * - 게임 룸을 만든 클라이언트만 해당 정보에 접근할 수 있다.
+   * - 게임 룸에 입장한 클라이언트만 게임 룸을 가져올 수 있다.
    *
    * @param clientId 게임 클라이언트 GUID
    * @param roomId 게임 룸 ID
    * @returns 게임 룸
    */
   async getRoom(clientId: string, roomId: string): Promise<GameRoom> {
-    if (!clientId) {
-      throw new GameRoomActionError("Client ID is invalid.");
-    }
-    if (!roomId) {
-      throw new GameRoomActionError("Room ID is invalid.");
+    if (!clientId || !roomId) {
+      throw new GameRoomInvalidParameterError();
     }
 
     const room = await this.roomRepo.getById(roomId);
     if (!room.isClientIn(clientId)) {
-      throw new GameRoomAuthError(`Client ID ${clientId} is not authorized to access room ${roomId}`);
+      throw new GameRoomAuthError();
+    }
+    return room;
+  }
+
+  /**
+   * 게임 룸에 입장한다.
+   */
+  async joinRoom(guestId: string, hostId: string, roomId: string): Promise<void> {
+    if (!guestId || !hostId || !roomId) {
+      throw new GameRoomInvalidParameterError();
     }
 
-    return room;
+    const room = await this.roomRepo.getById(roomId);
+    if (room.hostId !== hostId) {
+      throw new GameRoomAuthError();
+    }
+    if (room.guestId === guestId) {
+      throw new GameRoomActionError(`Guest ID ${guestId} is already in room ${roomId}.`);
+    }
+    if (room.isFull()) {
+      throw new GameRoomFullError();
+    }
+    room.join(guestId);
+    await this.roomRepo.update(room);
   }
 
   /**
@@ -67,18 +90,14 @@ export class GameRoomService {
    * @param roomId 닫을 게임 룸 ID
    */
   async closeRoom(clientId: string, roomId: string): Promise<void> {
-    if (!clientId) {
-      throw new GameRoomActionError("Client ID is invalid.");
-    }
-    if (!roomId) {
-      throw new GameRoomActionError("Room ID is invalid.");
+    if (!clientId || !roomId) {
+      throw new GameRoomInvalidParameterError();
     }
 
     const room = await this.roomRepo.getById(roomId);
     if (!room.isHost(clientId)) {
-      throw new GameRoomAuthError(`Client ID ${clientId} is not authorized to close room ${roomId}`);
+      throw new GameRoomAuthError();
     }
-
     await this.roomRepo.delete(roomId);
   }
 
@@ -91,18 +110,14 @@ export class GameRoomService {
    * @param axis 해제할 자이로 축
    */
   async releaseGyro(clientId: string, roomId: string, axis: GyroAxis): Promise<void> {
-    if (!clientId) {
-      throw new GameRoomActionError("Client ID is invalid.");
-    }
-    if (!roomId) {
-      throw new GameRoomActionError("Room ID is invalid.");
+    if (!clientId || !roomId || !axis) {
+      throw new GameRoomInvalidParameterError();
     }
 
     const room = await this.roomRepo.getById(roomId);
     if (!room.isClientIn(clientId)) {
-      throw new GameRoomAuthError(`Client ID ${clientId} is not authorized to release gyro on room ${roomId}`);
+      throw new GameRoomAuthError();
     }
-
     room.releaseGyro(axis);
     await this.roomRepo.update(room);
   }
@@ -116,11 +131,8 @@ export class GameRoomService {
    * @param axis 플레이어가 맡을 자이로 축
    */
   async joinGyro(controllerId: string, roomId: string, axis: GyroAxis): Promise<void> {
-    if (!controllerId) {
-      throw new GameRoomActionError("Controller ID is invalid.");
-    }
-    if (!roomId) {
-      throw new GameRoomActionError("Room ID is invalid.");
+    if (!controllerId || !roomId || !axis) {
+      throw new GameRoomInvalidParameterError();
     }
 
     const room = await this.roomRepo.getById(roomId);
@@ -129,9 +141,8 @@ export class GameRoomService {
       return;
     }
     if (gyroHolder !== null) {
-      throw new GameRoomAuthError(`Gyro axis ${axis} is already occupied in room ${roomId}`);
+      throw new GameRoomAuthError();
     }
-
     room.dedicateGyro(controllerId, axis);
     await this.roomRepo.update(room);
   }
@@ -144,22 +155,15 @@ export class GameRoomService {
    * @param axis 플레이어가 해제할 자이로 축축
    */
   async leaveGyro(controllerId: string, roomId: string, axis: GyroAxis): Promise<void> {
-    if (!controllerId) {
-      throw new GameRoomActionError("Controller ID is invalid.");
-    }
-    if (!roomId) {
-      throw new GameRoomActionError("Room ID is invalid.");
+    if (!controllerId || !roomId || !axis) {
+      throw new GameRoomInvalidParameterError();
     }
 
     const room = await this.roomRepo.getById(roomId);
     const gyroHolder = room.getGyroHolder(axis);
-    if (gyroHolder === null) {
-      throw new GameRoomActionError(`Gyro axis ${axis} is not occupied in room ${roomId}`);
-    }
     if (gyroHolder !== controllerId) {
-      throw new GameRoomAuthError(`Controller ID ${controllerId} is not authorized to leave gyro on room ${roomId}`);
+      throw new GameRoomAuthError();
     }
-
     room.releaseGyro(axis);
     await this.roomRepo.update(room);
   }
@@ -173,11 +177,8 @@ export class GameRoomService {
    * @param gyro 업데이트할 자이로 정보
    */
   async updateGyro(controllerId: string, roomId: string, gyro: Gyro): Promise<void> {
-    if (!controllerId) {
-      throw new GameRoomActionError("Controller ID is invalid.");
-    }
-    if (!roomId) {
-      throw new GameRoomActionError("Room ID is invalid.");
+    if (!controllerId || !roomId) {
+      throw new GameRoomInvalidParameterError();
     }
 
     await this.roomRepo.updateGyroById(roomId, controllerId, gyro);
@@ -190,7 +191,7 @@ export class GameRoomService {
    */
   public async getCurrentGyro(roomId: string): Promise<Gyro> {
     if (!roomId) {
-      throw new GameRoomActionError("Room ID is invalid.");
+      throw new GameRoomInvalidParameterError();
     }
 
     return this.roomRepo.getGyroById(roomId);
