@@ -2,10 +2,13 @@ import { GameRoomRepository } from "@/interfaces/repositories";
 
 import { GameRoomInMemoryRepository } from "@/repositories/game-room-in-memory.repository";
 import { GameRoomService } from "@/services/game-room.service";
+import { WebRTCSignalingService } from "@/services/webrtc-signaling.service";
 
 import { Module } from "@nestjs/common";
+
 import { GameRoomController } from "./controllers/game-room.controller";
 import { GameRoomGateway } from "./gateways/game-room.gateway";
+import { WebRTCSignalingGateway } from "./gateways/webrtc-signaling.gateway";
 
 type CustomProvider<T> = {
   provide: string;
@@ -26,9 +29,20 @@ const gameRoomProvider: CustomProvider<GameRoomService> = {
     gameRoomRepo,
   }),
 };
+const webrtcSignalingProvider: CustomProvider<WebRTCSignalingService> = {
+  provide: "WebRTCSignalingService",
+  useValue: new WebRTCSignalingService({
+    gameRoomRepo,
+  }),
+};
 
 @Module({
   controllers: [GameRoomController],
-  providers: [gameRoomProvider, GameRoomGateway],
+  providers: [
+    gameRoomProvider, //
+    webrtcSignalingProvider,
+    GameRoomGateway,
+    WebRTCSignalingGateway,
+  ],
 })
 export class AppModule {}
