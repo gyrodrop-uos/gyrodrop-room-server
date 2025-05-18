@@ -50,7 +50,7 @@ export class GameRoomController {
     @Query("hostId") hostId: string,
     @Headers("game-client-id") clientId: string
   ) {
-    await this.gameRoomSrv.joinRoom(clientId, hostId, roomId);
+    await this.gameRoomSrv.joinRoom(clientId, roomId, hostId);
   }
 
   @Post(":roomId/close")

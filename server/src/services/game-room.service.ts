@@ -63,8 +63,8 @@ export class GameRoomService {
   /**
    * 게임 룸에 입장한다.
    */
-  async joinRoom(guestId: string, hostId: string, roomId: string): Promise<void> {
-    if (!guestId || !hostId || !roomId) {
+  async joinRoom(guestId: string, roomId: string, hostId: string): Promise<void> {
+    if (!guestId || !roomId) {
       throw new GameRoomInvalidParameterError();
     }
 

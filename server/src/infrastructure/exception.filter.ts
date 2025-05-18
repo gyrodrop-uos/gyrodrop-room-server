@@ -1,4 +1,4 @@
-import { EntityNotFoundError, GameRoomActionError, GameRoomAuthError, InternalError } from "@/errors";
+import { EntityNotFoundError, GameRoomError, GameRoomAuthError, InternalError } from "@/errors";
 
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from "@nestjs/common";
 import { Response } from "express";
@@ -21,11 +21,11 @@ export class AllExceptionFilter implements ExceptionFilter {
     if (exception instanceof EntityNotFoundError) {
       status = HttpStatus.NOT_FOUND;
       message = exception.message;
-    } else if (exception instanceof GameRoomActionError) {
-      status = HttpStatus.BAD_REQUEST;
-      message = exception.message;
     } else if (exception instanceof GameRoomAuthError) {
       status = HttpStatus.UNAUTHORIZED;
+      message = exception.message;
+    } else if (exception instanceof GameRoomError) {
+      status = HttpStatus.BAD_REQUEST;
       message = exception.message;
     } else if (exception instanceof InternalError) {
       status = HttpStatus.INTERNAL_SERVER_ERROR;
