@@ -4,7 +4,7 @@ import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway } from
 import { Gyro } from "@/models/gyro";
 import { GameRoomService } from "@/services/game-room.service";
 import { Socket } from "socket.io";
-import { GyroDTO } from "../dto/game-room.dto";
+import { GyroDTO } from "../dto/gyro.dto";
 
 @WebSocketGateway({ cors: true })
 export class GameRoomGateway {

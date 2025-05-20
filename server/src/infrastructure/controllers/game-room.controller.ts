@@ -3,7 +3,8 @@ import { Body, Controller, Get, Headers, Inject, Param, Post, Query } from "@nes
 import { GyroAxis } from "@/models/gyro";
 import { GameRoomService } from "@/services/game-room.service";
 import { ApiOkResponse, ApiParam, ApiTags } from "@nestjs/swagger";
-import { GameRoomDTO, GyroDTO } from "../dto/game-room.dto";
+import { GameRoomDTO } from "../dto/game-room.dto";
+import { GyroDTO } from "../dto/gyro.dto";
 
 @ApiTags("Game Room Operations")
 @Controller("rooms")
