@@ -1,5 +1,5 @@
 import { Gyro } from "../gyro/types";
-import { GameRoomApiClient, GameRoomApiError } from "./types";
+import { GameRoomApiClient, GameRoomError } from "./types";
 
 import { GameRoomApiClientHybrid } from "./game-room-hybrid";
 
@@ -63,21 +63,27 @@ export class GameRoomConnection {
       }
 
       this.notify("joining", "Joining room...");
-      await this._apiClient.joinRoom(this._roomId, this._controllerId, this._axis);
+      await this._apiClient.joinGyro(this._roomId, this._controllerId, this._axis);
       this.notify("joined", "Joined room successfully");
     } catch (error) {
-      if (error instanceof GameRoomApiError) {
+      if (error instanceof GameRoomError) {
         switch (error.errorType) {
-          case "ROOM_NOT_FOUND_ERROR":
+          case "GameRoomError":
+            this.notify("rejected", error.message);
+            break;
+          case "GameRoomNotFoundError":
             this.notify("rejected", "Room not found");
             break;
-          case "ROOM_AUTH_ERROR":
-            this.notify("rejected", "Axis has already been assigned");
+          case "GameRoomInvalidParameterError":
+            this.notify("rejected", "Invalid parameters");
             break;
-          case "ROOM_ACTION_ERROR":
-            console.error("Room action error:", error);
-            this.notify("rejected", "Room action error");
+          case "GameRoomFullError":
+            this.notify("rejected", "Room is full");
             break;
+          case "GameRoomAuthError":
+            this.notify("rejected", "Authentication error");
+            break;
+          case "GameRoomUnknownError":
           default:
             console.error("Unknown error:", error);
             this.notify("rejected", "Unknown error occurred");
@@ -98,25 +104,8 @@ export class GameRoomConnection {
     try {
       await this._apiClient.updateGyro(this._roomId, this._controllerId, gyro);
     } catch (error) {
-      if (error instanceof GameRoomApiError) {
+      if (error instanceof GameRoomError) {
         this.notify("rejected", `Cannot update gyro: ${error.message}`);
-      } else {
-        throw error;
-      }
-    }
-  }
-
-  public async leave() {
-    if (this._state !== "joined") {
-      throw new Error("Cannot leave: not in joined state");
-    }
-
-    try {
-      await this._apiClient.leaveRoom(this._roomId, this._controllerId, this._axis);
-      this.notify("leaved", "Left room successfully");
-    } catch (error) {
-      if (error instanceof GameRoomApiError) {
-        this.notify("rejected", `Cannot leave room: ${error.message}`);
       } else {
         throw error;
       }
@@ -134,7 +123,7 @@ export class GameRoomConnection {
   }
 }
 
-const gameRoomApiClient: GameRoomApiClient = new GameRoomApiClientHybrid("https://server.gyrodrop.xyz");
+const gameRoomApiClient: GameRoomApiClient = new GameRoomApiClientHybrid("https://dev-server.gyrodrop.xyz");
 
 export function createGameRoomConnection(
   roomId: string, //
