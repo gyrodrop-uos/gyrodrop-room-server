@@ -2,7 +2,7 @@ import { ArgumentsHost, Catch, ExceptionFilter, Inject, UseFilters, UsePipes, Va
 import { ConnectedSocket, MessageBody, OnGatewayDisconnect, SubscribeMessage, WebSocketGateway } from "@nestjs/websockets";
 import { Socket } from "socket.io";
 
-import { WebRTCSignalingError } from "@/errors";
+import { WebRTCSignalingError } from "@/errors/webrtc-signaling.error";
 import { WebRTCSignalingService } from "@/services/webrtc-signaling.service";
 import {
   WebRTCSignalingAckDto,

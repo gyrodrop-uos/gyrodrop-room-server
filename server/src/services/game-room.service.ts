@@ -1,12 +1,7 @@
 import { GameRoom } from "@/models/game-room";
 import { Gyro, GyroAxis } from "@/models/gyro";
 
-import {
-  GameRoomActionError,
-  GameRoomAuthError,
-  GameRoomFullError,
-  GameRoomInvalidParameterError,
-} from "@/errors/game-room.error";
+import { GameRoomAuthError, GameRoomError, GameRoomFullError, GameRoomInvalidParameterError } from "@/errors/game-room.error";
 import { GameRoomRepository } from "@/interfaces/repositories";
 
 /**
@@ -73,7 +68,7 @@ export class GameRoomService {
       throw new GameRoomAuthError();
     }
     if (room.guestId === guestId) {
-      throw new GameRoomActionError(`Guest ID ${guestId} is already in room ${roomId}.`);
+      throw new GameRoomError(`Guest ID ${guestId} is already in room ${roomId}.`);
     }
     if (room.isFull()) {
       throw new GameRoomFullError();

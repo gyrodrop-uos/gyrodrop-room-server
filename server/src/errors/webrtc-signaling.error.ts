@@ -1,6 +1,4 @@
-import { HandlerableError } from ".";
-
-export class WebRTCSignalingError extends HandlerableError {
+export class WebRTCSignalingError extends Error {
   private _messageId: string;
 
   constructor(messageId: string, message: string, name: string = "WebRTCError") {

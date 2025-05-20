@@ -1,7 +1,7 @@
 import { GameRoom } from "@/models/game-room";
 import { Gyro } from "@/models/gyro";
 
-import { EntityNotFoundError } from "@/errors";
+import { GameRoomNotFoundError } from "@/errors/game-room.error";
 import { GameRoomRepository } from "@/interfaces/repositories";
 
 import { v4 as uuidv4 } from "uuid";
@@ -21,7 +21,7 @@ export class GameRoomInMemoryRepository implements GameRoomRepository {
   public async getById(id: string): Promise<GameRoom> {
     const gameRoom = this.gameRooms.get(id);
     if (!gameRoom) {
-      throw new EntityNotFoundError(`GameRoom with id ${id} not found.`);
+      throw new GameRoomNotFoundError();
     }
     return gameRoom.copy();
   }
@@ -29,7 +29,7 @@ export class GameRoomInMemoryRepository implements GameRoomRepository {
   public async update(gameRoom: GameRoom): Promise<GameRoom> {
     const existingGameRoom = this.gameRooms.get(gameRoom.id);
     if (!existingGameRoom) {
-      throw new EntityNotFoundError(`GameRoom with id ${gameRoom.id} not found.`);
+      throw new GameRoomNotFoundError();
     }
     this.gameRooms.set(gameRoom.id, gameRoom);
     return gameRoom.copy();
@@ -38,7 +38,7 @@ export class GameRoomInMemoryRepository implements GameRoomRepository {
   public async delete(id: string): Promise<void> {
     const gameRoom = this.gameRooms.get(id);
     if (!gameRoom) {
-      throw new EntityNotFoundError(`GameRoom with id ${id} not found.`);
+      throw new GameRoomNotFoundError();
     }
     this.gameRooms.delete(id);
   }
@@ -46,7 +46,7 @@ export class GameRoomInMemoryRepository implements GameRoomRepository {
   public async getGyroById(id: string): Promise<Gyro> {
     const gameRoom = this.gameRooms.get(id);
     if (!gameRoom) {
-      throw new EntityNotFoundError(`GameRoom with id ${id} not found.`);
+      throw new GameRoomNotFoundError();
     }
     return gameRoom.getCurrentGyro();
   }
@@ -54,7 +54,7 @@ export class GameRoomInMemoryRepository implements GameRoomRepository {
   public async updateGyroById(id: string, controllerId: string, gyro: Gyro): Promise<void> {
     const room = this.gameRooms.get(id);
     if (!room) {
-      throw new EntityNotFoundError(`GameRoom with id ${id} not found.`);
+      throw new GameRoomNotFoundError();
     }
     room.updateGyro(gyro, controllerId);
   }

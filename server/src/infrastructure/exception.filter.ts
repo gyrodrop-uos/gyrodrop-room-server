@@ -1,7 +1,6 @@
-import { EntityNotFoundError, GameRoomError, GameRoomAuthError, InternalError } from "@/errors";
-
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from "@nestjs/common";
 import { Response } from "express";
+import { isHandlerableError } from "@/errors/common.error";
 
 @Catch()
 export class AllExceptionFilter implements ExceptionFilter {
@@ -11,32 +10,28 @@ export class AllExceptionFilter implements ExceptionFilter {
 
     // Bypass NestJS's default exception filter
     if (exception instanceof HttpException) {
-      return res.status(exception.getStatus()).json(exception.getResponse());
+      return res.status(exception.getStatus()).json({
+        _error: exception.getResponse(),
+      });
     }
 
-    let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message = "Internal server error";
+    let status: number = HttpStatus.INTERNAL_SERVER_ERROR;
+    let name: string = "InternalServerError";
+    let message: string = "Internal server error";
 
     // After bypassing, we can handle our custom exceptions
-    if (exception instanceof EntityNotFoundError) {
-      status = HttpStatus.NOT_FOUND;
-      message = exception.message;
-    } else if (exception instanceof GameRoomAuthError) {
-      status = HttpStatus.UNAUTHORIZED;
-      message = exception.message;
-    } else if (exception instanceof GameRoomError) {
-      status = HttpStatus.BAD_REQUEST;
-      message = exception.message;
-    } else if (exception instanceof InternalError) {
-      status = HttpStatus.INTERNAL_SERVER_ERROR;
-      message = "Internal server error (manually triggered)";
-      console.error("Internal error:", exception);
-    } else {
-      console.error("Unknown error:", exception);
+    if (isHandlerableError(exception)) {
+      status = exception.getHttpStatusCode();
+      name = exception.getErrorType();
+      message = exception.getErrorMessage();
+    } else if (exception instanceof Error) {
+      console.error("Unhandled error:", exception);
     }
+
     res.status(status).json({
       statusCode: status,
-      message,
+      errorName: name,
+      errorMessage: message,
     });
   }
 }
