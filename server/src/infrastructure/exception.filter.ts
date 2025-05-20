@@ -11,7 +11,9 @@ export class AllExceptionFilter implements ExceptionFilter {
     // Bypass NestJS's default exception filter
     if (exception instanceof HttpException) {
       return res.status(exception.getStatus()).json({
-        _error: exception.getResponse(),
+        statusCode: exception.getStatus(),
+        errorType: exception.name,
+        errorMessage: exception.message,
       });
     }
 
@@ -30,7 +32,7 @@ export class AllExceptionFilter implements ExceptionFilter {
 
     res.status(status).json({
       statusCode: status,
-      errorName: name,
+      errorType: name,
       errorMessage: message,
     });
   }
