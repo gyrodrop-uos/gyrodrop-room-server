@@ -42,14 +42,6 @@ export class GameRoom {
     }
   }
 
-  public kick(): boolean {
-    if (this._guestId !== null) {
-      this._guestId = null;
-      return true;
-    }
-    return false;
-  }
-
   public isFull(): boolean {
     return this._guestId !== null;
   }
@@ -63,19 +55,19 @@ export class GameRoom {
     return null;
   }
 
-  public releaseGyro(axis: GyroAxis) {
-    if (axis === GyroAxis.Pitch) {
-      this._pitchHolderId = null;
-    } else if (axis === GyroAxis.Roll) {
-      this._rollHolderId = null;
-    }
-  }
-
-  public dedicateGyro(controllerId: string, axis: GyroAxis) {
+  public setGyroHolder(controllerId: string, axis: GyroAxis) {
     if (axis === GyroAxis.Pitch) {
       this._pitchHolderId = controllerId;
     } else if (axis === GyroAxis.Roll) {
       this._rollHolderId = controllerId;
+    }
+  }
+
+  public resetGyroHolder(axis: GyroAxis) {
+    if (axis === GyroAxis.Pitch) {
+      this._pitchHolderId = null;
+    } else if (axis === GyroAxis.Roll) {
+      this._rollHolderId = null;
     }
   }
 
@@ -103,15 +95,11 @@ export class GameRoom {
     if (this.hostId === clientId) {
       return true;
     }
-    if (this._guestId === clientId) {
+    if (this.guestId === clientId) {
       return true;
     }
 
     return false;
-  }
-
-  public isHost(clientId: string): boolean {
-    return this.hostId === clientId;
   }
 
   public copy(): GameRoom {
