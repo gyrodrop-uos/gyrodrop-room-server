@@ -14,7 +14,8 @@ export type WebRTCSignalingAckData = {
   errorMessage?: string;
   payload?: {
     // 추가적인 데이터가 필요할 경우 사용
-    turnCredential?: string; // TURN 서버 인증 정보
+    turnUsername?: string; // TURN 서버 사용자 이름
+    turnCredential?: string; // TURN 서버 비밀번호
   };
 };
 export type WebRTCSignalingOfferData = {
@@ -144,7 +145,7 @@ export class WebRTCSignalingService {
           messageId,
           isSuccess: true,
           payload: {
-            turnCredential: this.generateTurnCredential(localId),
+            ...this.generateTurnCredential(localId),
           },
         });
       } catch (err) {
@@ -174,7 +175,7 @@ export class WebRTCSignalingService {
           messageId,
           isSuccess: true,
           payload: {
-            turnCredential: this.generateTurnCredential(localId),
+            ...this.generateTurnCredential(localId),
           },
         });
         return { peerId: localId, connectionId, actions: localActions };
@@ -272,7 +273,7 @@ export class WebRTCSignalingService {
     return connection;
   }
 
-  private generateTurnCredential(peerId: string, ttlSeconds: number = 3600): string {
+  private generateTurnCredential(peerId: string, ttlSeconds: number = 3600) {
     const secret = this.turnSecret;
     const expirationTimestamp = Math.floor(Date.now() / 1000) + ttlSeconds;
     const username = `${expirationTimestamp}:${peerId}`;
@@ -281,6 +282,9 @@ export class WebRTCSignalingService {
     hmac.update(username);
     const password = hmac.digest("base64");
 
-    return `${username}:${password}`;
+    return {
+      turnUsername: username,
+      turnCredential: password,
+    };
   }
 }

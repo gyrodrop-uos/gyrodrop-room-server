@@ -17,7 +17,8 @@ export class WebRTCSignalingAckDto extends WebRTCSignalingCommonDto {
 
   @IsOptional()
   payload?: {
-    turnCredential?: string; // TURN 서버 인증 정보
+    turnUsername?: string; // TURN 서버 사용자 이름
+    turnCredential?: string; // TURN 서버 비밀번호
   };
 }
 
