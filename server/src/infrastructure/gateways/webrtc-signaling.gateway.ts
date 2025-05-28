@@ -69,14 +69,14 @@ export class WebRTCSignalingGateway implements OnGatewayDisconnect {
     @MessageBody() message: WebRTCSignalingRegisterDto, //
     @ConnectedSocket() socket: SocketSignaling
   ) {
-    const { messageId, peerId, remoteId, roomId } = message;
+    const { messageId, localId, remoteId, roomId } = message;
     await this.signalingService.connect(
       {
         messageId,
-        peerId,
+        localId,
         remoteId,
         roomId,
-        actions: {
+        localActions: {
           // 등록된 피어에 대해 아래의 형식의의 데이터를 전송할 수 있는 메서드들을 등록한다.
           // 즉, 다른 피어에서 해당 피어로 메시지를 전달하려고 할 때 사용하는 메서드들이다.
           ack: (data) => {

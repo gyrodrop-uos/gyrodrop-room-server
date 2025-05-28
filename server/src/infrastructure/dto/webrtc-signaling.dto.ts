@@ -19,7 +19,7 @@ export class WebRTCSignalingAckDto extends WebRTCSignalingCommonDto {
 export class WebRTCSignalingRegisterDto extends WebRTCSignalingCommonDto {
   @IsString()
   @IsNotEmpty()
-  peerId!: string;
+  localId!: string;
 
   @IsString()
   @IsNotEmpty()

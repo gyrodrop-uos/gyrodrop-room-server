@@ -45,12 +45,12 @@ export interface WebRTCSignalingMeta {
 }
 
 /**
- * `peerId`에 연결된 원격지 피어의 정보를 담고 있다.
- * `peerId`의 커넥션과 액션이 `remoteConnectionId`과 `remoteActions`이 **아님을 주의**.
+ * `localId`에 연결된 원격지 피어의 정보를 담고 있다.
  */
 type EstablishedConnection = {
-  peerId: string;
-  actions: WebRTCSignalingActions;
+  localId: string;
+  localActions: WebRTCSignalingActions;
+  remoteId: string;
   remoteConnectionId: string;
   remoteActions: WebRTCSignalingActions;
 };
@@ -65,7 +65,7 @@ type ConnectionCaller = {
 };
 
 export class WebRTCSignalingService {
-  private roomRepo: GameRoomRepository;
+  private readonly roomRepo: GameRoomRepository;
 
   /**
    * WebRTC Signaling을 위한 연결을 관리한다.
@@ -92,23 +92,24 @@ export class WebRTCSignalingService {
   public async connect(
     params: {
       messageId: string;
-      peerId: string;
+      localId: string;
       remoteId: string;
       roomId: string;
-      actions: WebRTCSignalingActions;
+      localActions: WebRTCSignalingActions;
     },
     event?: {
       onPeerMatched?: (peerId: string, connectionId: string) => void;
     }
   ): Promise<void> {
-    const { messageId, peerId, remoteId, roomId, actions } = params;
+    const { messageId, localId, remoteId, roomId, localActions } = params;
 
-    if (!messageId || !peerId || !remoteId || !roomId) {
+    if (!messageId || !localId || !remoteId || !roomId) {
       // 메시지 ID, 송신자, 수신자, 방 ID가 모두 필요하다.
       throw new WebRTCSignalingError(messageId, "Invalid parameter.");
     }
-    if ((await this.checkPeersInRoom([peerId], roomId)) === false) {
-      // 송신자가 방에 없을 경우
+    if ((await this.checkPeersInRoom([localId], roomId)) === false) {
+      // 로컬 피어가 방에 없을 경우 연결을 거부한다.
+      // 원격 피어가 방에 있는지는 나중에 확인한다.
       throw new WebRTCSignalingBlockError(messageId);
     }
 
@@ -119,16 +120,17 @@ export class WebRTCSignalingService {
     if (callback) {
       // 어느 누구 한 명이 먼저 연결을 시도한 경우, 메시지를 처리한다.
       try {
-        const callee = await callback({ peerId, connectionId, actions });
+        const callee = await callback({ peerId: localId, connectionId, actions: localActions });
 
         this.connections.set(connectionId, {
-          peerId,
-          actions,
+          localId,
+          localActions,
+          remoteId: callee.peerId,
           remoteConnectionId: callee.connectionId,
           remoteActions: callee.actions,
         });
-        event?.onPeerMatched?.(peerId, connectionId);
-        actions.ack({ messageId, isSuccess: true });
+        event?.onPeerMatched?.(localId, connectionId);
+        localActions.ack({ messageId, isSuccess: true });
       } catch (err) {
         throw err; // 상위 레이어에 에러 전파 (콜백 함수 내에서 발생한 에러도 포함함)
       }
@@ -139,20 +141,21 @@ export class WebRTCSignalingService {
           // 연결을 시도한 피어가 수신자와 다를 경우
           throw new WebRTCSignalingBlockError(messageId);
         }
-        if ((await this.checkPeersInRoom([peerId, remoteId], roomId)) === false) {
+        if ((await this.checkPeersInRoom([localId, remoteId], roomId)) === false) {
           // 송신자와 수신자가 방에 없을 경우
           throw new WebRTCSignalingBlockError(messageId);
         }
 
         this.connections.set(connectionId, {
-          peerId,
-          actions,
+          localId,
+          localActions,
+          remoteId: caller.peerId,
           remoteConnectionId: caller.connectionId,
           remoteActions: caller.actions,
         });
-        event?.onPeerMatched?.(peerId, connectionId);
-        actions.ack({ messageId, isSuccess: true });
-        return { peerId, connectionId, actions };
+        event?.onPeerMatched?.(localId, connectionId);
+        localActions.ack({ messageId, isSuccess: true });
+        return { peerId: localId, connectionId, actions: localActions };
       });
     }
   }
@@ -183,7 +186,7 @@ export class WebRTCSignalingService {
     if (!connection) {
       throw new WebRTCSignalingConnectionNotFoundError(messageId);
     }
-    connection.actions.ack({ messageId, isSuccess, errorMessage });
+    connection.localActions.ack({ messageId, isSuccess, errorMessage });
   }
 
   /**
@@ -241,7 +244,7 @@ export class WebRTCSignalingService {
     if (!connection) {
       throw new WebRTCSignalingConnectionNotFoundError(messageId);
     }
-    if (connection.peerId !== peerId) {
+    if (connection.localId !== peerId) {
       throw new WebRTCSignalingBlockError(messageId);
     }
     return connection;
