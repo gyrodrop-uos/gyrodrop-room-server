@@ -5,6 +5,7 @@ import { GameRoomService } from "@/services/game-room.service";
 import { WebRTCSignalingService } from "@/services/webrtc-signaling.service";
 
 import { Module } from "@nestjs/common";
+import { getEnv } from "@/env";
 
 import { GameRoomController } from "./controllers/game-room.controller";
 import { GameRoomGateway } from "./gateways/game-room.gateway";
@@ -33,6 +34,7 @@ const webrtcSignalingProvider: CustomProvider<WebRTCSignalingService> = {
   provide: "WebRTCSignalingService",
   useValue: new WebRTCSignalingService({
     gameRoomRepo,
+    turnSecret: getEnv().TURN_SECRET,
   }),
 };
 

@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
 import {
   WebRTCSignalingError,
   WebRTCSignalingBlockError,
@@ -11,6 +12,10 @@ export type WebRTCSignalingAckData = {
   messageId: string;
   isSuccess: boolean;
   errorMessage?: string;
+  payload?: {
+    // 추가적인 데이터가 필요할 경우 사용
+    turnCredential?: string; // TURN 서버 인증 정보
+  };
 };
 export type WebRTCSignalingOfferData = {
   sdp: string;
@@ -66,6 +71,7 @@ type ConnectionCaller = {
 
 export class WebRTCSignalingService {
   private readonly roomRepo: GameRoomRepository;
+  private readonly turnSecret: string;
 
   /**
    * WebRTC Signaling을 위한 연결을 관리한다.
@@ -78,8 +84,12 @@ export class WebRTCSignalingService {
   private pendingConnectionCalls: Map<string, (caller: ConnectionCaller) => Promise<ConnectionCaller>>; // roomId to callback
   private awaitingMessages: Map<string, WebRTCSignalingMeta>; // messageId to meta
 
-  constructor(di: { gameRoomRepo: GameRoomRepository }) {
+  constructor(di: { gameRoomRepo: GameRoomRepository; turnSecret: string }) {
     this.roomRepo = di.gameRoomRepo;
+    this.turnSecret = di.turnSecret;
+    if (!this.turnSecret) {
+      throw new Error("TURN secret must be provided for WebRTC Signaling Service.");
+    }
     this.connections = new Map();
     this.pendingConnectionCalls = new Map();
     this.awaitingMessages = new Map();
@@ -130,7 +140,13 @@ export class WebRTCSignalingService {
           remoteActions: callee.actions,
         });
         event?.onPeerMatched?.(localId, connectionId);
-        localActions.ack({ messageId, isSuccess: true });
+        localActions.ack({
+          messageId,
+          isSuccess: true,
+          payload: {
+            turnCredential: this.generateTurnCredential(localId),
+          },
+        });
       } catch (err) {
         throw err; // 상위 레이어에 에러 전파 (콜백 함수 내에서 발생한 에러도 포함함)
       }
@@ -154,7 +170,13 @@ export class WebRTCSignalingService {
           remoteActions: caller.actions,
         });
         event?.onPeerMatched?.(localId, connectionId);
-        localActions.ack({ messageId, isSuccess: true });
+        localActions.ack({
+          messageId,
+          isSuccess: true,
+          payload: {
+            turnCredential: this.generateTurnCredential(localId),
+          },
+        });
         return { peerId: localId, connectionId, actions: localActions };
       });
     }
@@ -248,5 +270,17 @@ export class WebRTCSignalingService {
       throw new WebRTCSignalingBlockError(messageId);
     }
     return connection;
+  }
+
+  private generateTurnCredential(peerId: string, ttlSeconds: number = 3600): string {
+    const secret = this.turnSecret;
+    const expirationTimestamp = Math.floor(Date.now() / 1000) + ttlSeconds;
+    const username = `${expirationTimestamp}:${peerId}`;
+
+    const hmac = crypto.createHmac("sha1", secret);
+    hmac.update(username);
+    const password = hmac.digest("base64");
+
+    return `${username}:${password}`;
   }
 }

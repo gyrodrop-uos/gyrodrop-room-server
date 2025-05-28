@@ -80,8 +80,8 @@ export class WebRTCSignalingGateway implements OnGatewayDisconnect {
           // 등록된 피어에 대해 아래의 형식의의 데이터를 전송할 수 있는 메서드들을 등록한다.
           // 즉, 다른 피어에서 해당 피어로 메시지를 전달하려고 할 때 사용하는 메서드들이다.
           ack: (data) => {
-            const { messageId, isSuccess, errorMessage } = data;
-            socket.emit(ACK_EVENT, { messageId, isSuccess, errorMessage });
+            const { messageId, isSuccess, errorMessage, payload } = data;
+            socket.emit(ACK_EVENT, { messageId, isSuccess, errorMessage, payload });
           },
           offer: (messageId, data) => {
             const { sdp } = data;
