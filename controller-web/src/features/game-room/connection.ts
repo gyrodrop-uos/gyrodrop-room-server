@@ -123,7 +123,8 @@ export class GameRoomConnection {
   }
 }
 
-const gameRoomApiClient: GameRoomApiClient = new GameRoomApiClientHybrid("https://dev-server.gyrodrop.xyz");
+const gameRoomServerUrl = import.meta.env.VITE_ROOM_SERVER_URL;
+const gameRoomApiClient: GameRoomApiClient = new GameRoomApiClientHybrid(gameRoomServerUrl);
 
 export function createGameRoomConnection(
   roomId: string, //
