@@ -18,3 +18,14 @@ export interface GameRoomRepository {
   getGyroById(id: string): Promise<Gyro>;
   updateGyroById(id: string, controllerId: string, gyro: Gyro): Promise<void>;
 }
+
+/**
+ * ShortCode Repository
+ *
+ * - 임의의 문자열을 특정 코드로 변환하는 매핑 테이블을 관리합니다.
+ */
+export interface ShortCodeRepository {
+  generate(value: string, length: number, ttl: number): Promise<string>;
+  getByCode(code: string): Promise<string>;
+  delete(code: string): Promise<void>;
+}
