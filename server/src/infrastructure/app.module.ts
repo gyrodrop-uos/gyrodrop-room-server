@@ -1,6 +1,7 @@
-import { GameRoomRepository } from "@/interfaces/repositories";
+import { GameRoomRepository, ShortCodeRepository } from "@/interfaces/repositories";
 
 import { GameRoomInMemoryRepository } from "@/repositories/game-room-in-memory.repository";
+import { ShortCodeBase62InMemoryRepository } from "@/repositories/short-code-base62-in-memory.repository";
 import { GameRoomService } from "@/services/game-room.service";
 import { WebRTCSignalingService } from "@/services/webrtc-signaling.service";
 
@@ -20,6 +21,7 @@ type CustomProvider<T> = {
 // Repository Dependency Injection
 // ================================
 const gameRoomRepo: GameRoomRepository = new GameRoomInMemoryRepository();
+const shortCodeRepo: ShortCodeRepository = new ShortCodeBase62InMemoryRepository();
 
 // ===================================
 // Service Layer Dependency Injection
@@ -28,6 +30,7 @@ const gameRoomProvider: CustomProvider<GameRoomService> = {
   provide: "GameRoomService",
   useValue: new GameRoomService({
     gameRoomRepo,
+    shortCodeRepo,
   }),
 };
 const webrtcSignalingProvider: CustomProvider<WebRTCSignalingService> = {

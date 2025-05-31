@@ -102,4 +102,21 @@ export class GameRoomController {
   ) {
     await this.gameRoomSrv.releaseGyro(clientId, roomId, axis);
   }
+
+  @Get(":roomId/code")
+  @ApiOkResponse({ type: String })
+  async getShortCode(
+    @Param("roomId") roomId: string, //
+    @Headers("game-client-id") clientId: string
+  ): Promise<string> {
+    return await this.gameRoomSrv.getShortCode(clientId, roomId);
+  }
+
+  @Post("code/:shortCode/join")
+  async joinRoomByShortCode(
+    @Param("shortCode") shortCode: string, //
+    @Headers("game-client-id") clientId: string
+  ) {
+    await this.gameRoomSrv.joinRoomByShortCode(clientId, shortCode);
+  }
 }
