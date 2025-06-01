@@ -113,10 +113,11 @@ export class GameRoomController {
   }
 
   @Post("code/:shortCode/join")
+  @ApiOkResponse({ type: String })
   async joinRoomByShortCode(
     @Param("shortCode") shortCode: string, //
     @Headers("game-client-id") clientId: string
   ) {
-    await this.gameRoomSrv.joinRoomByShortCode(clientId, shortCode);
+    return await this.gameRoomSrv.joinRoomByShortCode(clientId, shortCode);
   }
 }

@@ -84,7 +84,7 @@ export class GameRoomService {
   /**
    * 게임 룸에 단축 코드를 통해 입장한다.
    */
-  async joinRoomByShortCode(clientId: string, shortCode: string): Promise<void> {
+  async joinRoomByShortCode(clientId: string, shortCode: string): Promise<string> {
     if (!clientId || !shortCode) {
       throw new GameRoomInvalidParameterError();
     }
@@ -96,6 +96,8 @@ export class GameRoomService {
       throw new GameRoomNotFoundError();
     }
     await this.joinRoom(clientId, roomId);
+
+    return roomId;
   }
 
   /**
