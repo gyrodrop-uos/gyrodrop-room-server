@@ -12,6 +12,7 @@ import { Module } from "@nestjs/common";
 
 import { ClientVersionController } from "./controllers/client-version.controller";
 import { GameRoomController } from "./controllers/game-room.controller";
+import { HealthController } from "./controllers/health.controller";
 import { GameRoomGateway } from "./gateways/game-room.gateway";
 import { WebRTCSignalingGateway } from "./gateways/webrtc-signaling.gateway";
 
@@ -55,7 +56,11 @@ const clientVersionProvider: CustomProvider<ClientVersionService> = {
 };
 
 @Module({
-  controllers: [GameRoomController, ClientVersionController],
+  controllers: [
+    HealthController, //
+    GameRoomController,
+    ClientVersionController,
+  ],
   providers: [
     gameRoomProvider, //
     webrtcSignalingProvider,
