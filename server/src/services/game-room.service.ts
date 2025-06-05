@@ -1,32 +1,46 @@
-import { GameRoomActionError, GameRoomAuthError } from "@/errors";
-import { GameRoom, Gyro, GyroAxis } from "@/interfaces/models";
-import { GameRoomRepository } from "@/interfaces/repositories";
+import { GameRoom } from "@/models/game-room";
+import { Gyro, GyroAxis } from "@/models/gyro";
+
+import {
+  GameRoomAuthError,
+  GameRoomError,
+  GameRoomFullError,
+  GameRoomInvalidParameterError,
+  GameRoomNotFoundError,
+} from "@/errors/game-room.error";
+import { ShortCodeNotFoundError } from "@/errors/short-code.error";
+import { GameRoomRepository, ShortCodeRepository } from "@/interfaces/repositories";
 
 /**
  * 게임 룸 서비스 구현체
  *
  * - 게임 룸을 생성하고 관리하는 서비스
- * - 게임 클라이언트 ID(`clientId`)는 일종의 대칭키처럼 사용된다.
- * - 게임 클라이언트 ID는 Unity 게임 내에서 생성된 GUID이다.
- * - 컨트롤러 ID(`controllerId`)는 게임 룸에 입장한 컨트롤러의 ID이며, 플레이어가 게임 룸에 입장할 때 사용된다.
- * - 컨트롤러 ID는 컨트롤러 앱에서 생성한 임의의 UUID이다.
+ * - 게임 클라이언트 ID(`clientId`)는 Unity 게임 내에서 생성된 GUID이며 식별자로 사용된다.
+ * - 컨트롤러 ID(`controllerId`)는 GameRoom의 자이로 축을 점유하는 클라이언트의 ID이다.
+ * - 게임 룸 ID(`roomId`)는 게임 룸을 식별하고, 입장한 게임 클라이언트 ID와 함께 사용하여 게임 룸의 수정/삭제를 수행할 수 있다.
  */
 export class GameRoomService {
   private roomRepo: GameRoomRepository;
+  private shortCodeRepo: ShortCodeRepository;
 
-  constructor(di: { gameRoomRepo: GameRoomRepository }) {
+  constructor(di: {
+    gameRoomRepo: GameRoomRepository; //
+    shortCodeRepo: ShortCodeRepository;
+  }) {
     this.roomRepo = di.gameRoomRepo;
+    this.shortCodeRepo = di.shortCodeRepo;
   }
+
+  private readonly SHORT_CODE_LENGTH = 6;
+  private readonly SHORT_CODE_EXPIRATION = 60 * 60; // 1 hour in seconds
+  private idToShortCode: Map<string, string> = new Map();
 
   /**
    * 게임 룸을 생성한다.
-   *
-   * @param clientId 게임 클라이언트 ID
-   * @returns 게임 룸 ID
    */
   async openRoom(clientId: string): Promise<string> {
     if (!clientId) {
-      throw new GameRoomActionError("Client ID is invalid.");
+      throw new GameRoomInvalidParameterError();
     }
 
     const room = await this.roomRepo.create({ clientId });
@@ -34,47 +48,74 @@ export class GameRoomService {
   }
 
   /**
-   * 게임 룸을 가져온다.
-   * - 게임 룸을 만든 클라이언트만 해당 정보에 접근할 수 있다.
-   *
-   * @param clientId 게임 클라이언트 GUID
-   * @param roomId 게임 룸 ID
-   * @returns 게임 룸
+   * 게임 룸을 가져온다. 게임 룸에 입장한 클라이언트만 게임 룸을 가져올 수 있다.
    */
   async getRoom(clientId: string, roomId: string): Promise<GameRoom> {
-    if (!clientId) {
-      throw new GameRoomActionError("Client ID is invalid.");
+    if (!clientId || !roomId) {
+      throw new GameRoomInvalidParameterError();
     }
-    if (!roomId) {
-      throw new GameRoomActionError("Room ID is invalid.");
-    }
-
     const room = await this.roomRepo.getById(roomId);
-    if (room.clientId !== clientId) {
-      throw new GameRoomAuthError(`Client ID ${clientId} is not authorized to access room ${roomId}`);
+    if (!room.isClientIn(clientId)) {
+      throw new GameRoomAuthError();
     }
 
     return room;
   }
 
   /**
-   * 게임 룸을 닫는다.
-   * - 게임 룸을 만든 클라이언트만 게임 룸을 닫을 수 있다.
-   *
-   * @param clientId 게임 클라이언트 GUID
-   * @param roomId 닫을 게임 룸 ID
+   * 게임 룸에 입장한다.
    */
-  async closeRoom(clientId: string, roomId: string): Promise<void> {
-    if (!clientId) {
-      throw new GameRoomActionError("Client ID is invalid.");
+  async joinRoom(clientId: string, roomId: string): Promise<void> {
+    if (!clientId || !roomId) {
+      throw new GameRoomInvalidParameterError();
     }
-    if (!roomId) {
-      throw new GameRoomActionError("Room ID is invalid.");
+    const room = await this.roomRepo.getById(roomId);
+    if (room.guestId === clientId) {
+      throw new GameRoomError(`Guest ID ${clientId} is already in room ${roomId}.`);
+    }
+    if (room.isFull()) {
+      throw new GameRoomFullError();
     }
 
+    room.join(clientId);
+    await this.roomRepo.update(room);
+  }
+
+  /**
+   * 게임 룸에 단축 코드를 통해 입장한다.
+   */
+  async joinRoomByShortCode(clientId: string, shortCode: string): Promise<string> {
+    if (!clientId || !shortCode) {
+      throw new GameRoomInvalidParameterError();
+    }
+    // 브루트 포스 공격을 방지하기 위해 1초 대기
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    const roomId = await this.shortCodeRepo.getByCode(shortCode);
+    if (!roomId) {
+      throw new GameRoomNotFoundError();
+    }
+    await this.joinRoom(clientId, roomId);
+
+    return roomId;
+  }
+
+  /**
+   * 게임 룸에서 퇴장한다. 한 명이라도 퇴장하면 게임 룸이 삭제된다.
+   */
+  async leaveRoom(clientId: string, roomId: string): Promise<void> {
+    if (!clientId || !roomId) {
+      throw new GameRoomInvalidParameterError();
+    }
     const room = await this.roomRepo.getById(roomId);
-    if (room.clientId !== clientId) {
-      throw new GameRoomAuthError(`Client ID ${clientId} is not authorized to close room ${roomId}`);
+    if (!room.isClientIn(clientId)) {
+      throw new GameRoomAuthError();
+    }
+
+    const code = this.idToShortCode.get(room.id);
+    if (code) {
+      this.idToShortCode.delete(room.id);
+      await this.shortCodeRepo.delete(code);
     }
 
     await this.roomRepo.delete(roomId);
@@ -82,100 +123,46 @@ export class GameRoomService {
 
   /**
    * 게임 클라이언트가 게임 룸에서 특정 자이로 축의 점유 권한을 해제한다.
-   * - 게임 룸의 소유자(클라이언트)만 자이로 축을 해제할 수 있다.
-   *
-   * @param clientId 게임 클라이언트 GUID
-   * @param roomId 자이로 컨트롤러를 해제할 게임 룸 ID
-   * @param axis 해제할 자이로 축
    */
   async releaseGyro(clientId: string, roomId: string, axis: GyroAxis): Promise<void> {
-    if (!clientId) {
-      throw new GameRoomActionError("Client ID is invalid.");
+    if (!clientId || !roomId || !axis) {
+      throw new GameRoomInvalidParameterError();
     }
-    if (!roomId) {
-      throw new GameRoomActionError("Room ID is invalid.");
-    }
-
     const room = await this.roomRepo.getById(roomId);
-    if (room.clientId !== clientId) {
-      throw new GameRoomAuthError(`Client ID ${clientId} is not authorized to release gyro on room ${roomId}`);
+    if (!room.isClientIn(clientId)) {
+      throw new GameRoomAuthError();
     }
 
-    room.releaseGyro(axis);
+    room.resetGyroHolder(axis);
     await this.roomRepo.update(room);
   }
 
   /**
    * 컨트롤러(플레이어)가 게임 룸의 자이로 컨트롤러로 입장한다.
-   * - 이미 점유된 자이로 축에 대해 입장할 수 없다.
-   *
-   * @param controllerId 컨트롤러 ID
-   * @param roomId 게임 룸 ID
-   * @param axis 플레이어가 맡을 자이로 축
    */
   async joinGyro(controllerId: string, roomId: string, axis: GyroAxis): Promise<void> {
-    if (!controllerId) {
-      throw new GameRoomActionError("Controller ID is invalid.");
+    if (!controllerId || !roomId || !axis) {
+      throw new GameRoomInvalidParameterError();
     }
-    if (!roomId) {
-      throw new GameRoomActionError("Room ID is invalid.");
-    }
-
     const room = await this.roomRepo.getById(roomId);
-    const gyroHolder = room.getGyroHolder(axis);
-    if (gyroHolder === controllerId) {
+    const gyroHolderId = room.getGyroHolder(axis);
+    if (gyroHolderId !== null) {
+      throw new GameRoomAuthError();
+    }
+    if (gyroHolderId === controllerId) {
       return;
     }
-    if (gyroHolder !== null) {
-      throw new GameRoomAuthError(`Gyro axis ${axis} is already occupied in room ${roomId}`);
-    }
 
-    room.dedicateGyro(controllerId, axis);
+    room.setGyroHolder(controllerId, axis);
     await this.roomRepo.update(room);
   }
 
   /**
-   * 플레이어가 게임 룸에서 자발적으로 퇴장한다.
-   *
-   * @param controllerId 컨트롤러 ID
-   * @param roomId 게임 룸 ID
-   * @param axis 플레이어가 해제할 자이로 축축
-   */
-  async leaveGyro(controllerId: string, roomId: string, axis: GyroAxis): Promise<void> {
-    if (!controllerId) {
-      throw new GameRoomActionError("Controller ID is invalid.");
-    }
-    if (!roomId) {
-      throw new GameRoomActionError("Room ID is invalid.");
-    }
-
-    const room = await this.roomRepo.getById(roomId);
-    const gyroHolder = room.getGyroHolder(axis);
-    if (gyroHolder === null) {
-      throw new GameRoomActionError(`Gyro axis ${axis} is not occupied in room ${roomId}`);
-    }
-    if (gyroHolder !== controllerId) {
-      throw new GameRoomAuthError(`Controller ID ${controllerId} is not authorized to leave gyro on room ${roomId}`);
-    }
-
-    room.releaseGyro(axis);
-    await this.roomRepo.update(room);
-  }
-
-  /**
-   * 게임 룸의 자이로 정보를 갱신한다.
-   * - 이 메서드는 빠르게 자주 호출되므로, 효율적인 처리가 필요하다.
-   *
-   * @param controllerId 컨트롤러 ID
-   * @param roomId 게임 룸 ID
-   * @param gyro 업데이트할 자이로 정보
+   * 게임 룸의 자이로 정보를 갱신한다. 이 메서드는 빠르게 자주 호출되므로, 효율적인 처리가 필요하다.
    */
   async updateGyro(controllerId: string, roomId: string, gyro: Gyro): Promise<void> {
-    if (!controllerId) {
-      throw new GameRoomActionError("Controller ID is invalid.");
-    }
-    if (!roomId) {
-      throw new GameRoomActionError("Room ID is invalid.");
+    if (!controllerId || !roomId) {
+      throw new GameRoomInvalidParameterError();
     }
 
     await this.roomRepo.updateGyroById(roomId, controllerId, gyro);
@@ -188,9 +175,42 @@ export class GameRoomService {
    */
   public async getCurrentGyro(roomId: string): Promise<Gyro> {
     if (!roomId) {
-      throw new GameRoomActionError("Room ID is invalid.");
+      throw new GameRoomInvalidParameterError();
     }
 
     return this.roomRepo.getGyroById(roomId);
+  }
+
+  public async getShortCode(clientId: string, roomId: string): Promise<string> {
+    if (!clientId || !roomId) {
+      throw new GameRoomInvalidParameterError();
+    }
+
+    const room = await this.roomRepo.getById(roomId);
+    if (!room.isClientIn(clientId)) {
+      throw new GameRoomAuthError();
+    }
+
+    let code = this.idToShortCode.get(room.id);
+    if (code) {
+      try {
+        // 이미 생성된 코드가 유효한지 확인
+        await this.shortCodeRepo.getByCode(code);
+        return code;
+      } catch (err) {
+        // 유효하지 않다면
+        if (err instanceof ShortCodeNotFoundError) {
+          this.idToShortCode.delete(room.id);
+        }
+      }
+    }
+
+    code = await this.shortCodeRepo.generate(
+      room.id, //
+      this.SHORT_CODE_LENGTH,
+      this.SHORT_CODE_EXPIRATION
+    );
+    this.idToShortCode.set(room.id, code);
+    return code;
   }
 }

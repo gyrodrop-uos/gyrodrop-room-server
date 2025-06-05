@@ -1,4 +1,4 @@
-import { GameRoomApiClient, GyroDTO, GameRoomErrorDTO, GameRoomApiError } from "./types";
+import { GameRoomApiClient, GyroDTO, GameRoomErrorDTO, GameRoomError, GameRoomErrorType } from "./types";
 import { Gyro } from "../gyro/types";
 import { Socket, io } from "socket.io-client";
 
@@ -16,40 +16,19 @@ export class GameRoomApiClientHybrid implements GameRoomApiClient {
 
     try {
       error = await res.json();
-    } catch (error) {
-      throw new GameRoomApiError(
-        "ROOM_UNKNOWN_ERROR", //
-        `Failed to parse error response: ${(error as Error).message}`
+    } catch (e) {
+      throw new GameRoomError(
+        "GameRoomUnknownError", //
+        `Failed to parse error response: ${(e as Error).message}`
       );
     }
 
-    switch (error.statusCode) {
-      case 400:
-        throw new GameRoomApiError("ROOM_ACTION_ERROR");
-      case 401:
-        throw new GameRoomApiError("ROOM_AUTH_ERROR");
-      case 404:
-        throw new GameRoomApiError("ROOM_NOT_FOUND_ERROR");
-      default:
-        throw new GameRoomApiError("ROOM_UNKNOWN_ERROR");
-    }
+    const errorType = error.errorType as GameRoomErrorType;
+    throw new GameRoomError(errorType, error.errorMessage);
   }
 
-  public async joinRoom(roomId: string, playerId: string, axis: "pitch" | "roll"): Promise<void> {
-    const res = await fetch(`${this._backendUrl}/rooms/${roomId}/join/${axis}`, {
-      method: "POST",
-      headers: {
-        "Game-Controller-ID": playerId,
-      },
-    });
-
-    if (!res.ok) {
-      await this.handleError(res);
-    }
-  }
-
-  public async leaveRoom(roomId: string, playerId: string, axis: "pitch" | "roll"): Promise<void> {
-    const res = await fetch(`${this._backendUrl}/rooms/${roomId}/leave/${axis}`, {
+  public async joinGyro(roomId: string, playerId: string, axis: "pitch" | "roll"): Promise<void> {
+    const res = await fetch(`${this._backendUrl}/rooms/${roomId}/gyro/join/${axis}`, {
       method: "POST",
       headers: {
         "Game-Controller-ID": playerId,
@@ -73,7 +52,7 @@ export class GameRoomApiClientHybrid implements GameRoomApiClient {
         },
       });
     } catch (error) {
-      throw new GameRoomApiError("ROOM_UNKNOWN_ERROR", `Failed to update gyro: ${(error as Error).message}`);
+      throw new GameRoomError("GameRoomUnknownError", `Failed to update gyro: ${(error as Error).message}`);
     }
   }
 

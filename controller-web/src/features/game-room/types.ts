@@ -6,7 +6,8 @@ export interface GyroDTO {
 
 export interface GameRoomDTO {
   id: string;
-  clientId: string;
+  hostId: string;
+  guestId: string | null;
   createdAt: string;
   pitchHolderId: string | null;
   rollHolderId: string | null;
@@ -14,15 +15,23 @@ export interface GameRoomDTO {
 }
 
 export interface GameRoomErrorDTO {
-  message: string;
   statusCode: number;
+  errorType: GameRoomErrorType;
+  errorMessage: string;
 }
 
-export type GameRoomError = "ROOM_NOT_FOUND_ERROR" | "ROOM_ACTION_ERROR" | "ROOM_AUTH_ERROR" | "ROOM_UNKNOWN_ERROR";
-export class GameRoomApiError extends Error {
-  readonly errorType: GameRoomError;
+export type GameRoomErrorType =
+  | "GameRoomUnknownError"
+  | "GameRoomError"
+  | "GameRoomNotFoundError"
+  | "GameRoomInvalidParameterError"
+  | "GameRoomFullError"
+  | "GameRoomAuthError";
 
-  constructor(errorType: GameRoomError, message?: string) {
+export class GameRoomError extends Error {
+  readonly errorType: GameRoomErrorType;
+
+  constructor(errorType: GameRoomErrorType, message?: string) {
     super(`${errorType}${message ? `: ${message}` : ""}`);
     this.name = "GameRoomApiError";
     this.errorType = errorType;
@@ -30,8 +39,7 @@ export class GameRoomApiError extends Error {
 }
 
 export interface GameRoomApiClient {
-  joinRoom(roomId: string, playerId: string, axis: "pitch" | "roll"): Promise<void>;
-  leaveRoom(roomId: string, playerId: string, axis: "pitch" | "roll"): Promise<void>;
+  joinGyro(roomId: string, playerId: string, axis: "pitch" | "roll"): Promise<void>;
   updateGyro(roomId: string, playerId: string, gyro: GyroDTO): Promise<void>;
   getCurrentGyro(roomId: string): Promise<GyroDTO>;
 }

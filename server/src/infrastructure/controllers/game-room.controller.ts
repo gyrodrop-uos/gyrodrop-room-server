@@ -1,9 +1,10 @@
 import { Body, Controller, Get, Headers, Inject, Param, Post } from "@nestjs/common";
 
-import { GyroAxis } from "@/interfaces/models";
+import { GyroAxis } from "@/models/gyro";
 import { GameRoomService } from "@/services/game-room.service";
 import { ApiOkResponse, ApiParam, ApiTags } from "@nestjs/swagger";
-import { GameRoomDTO, GyroDTO } from "../dto/game-room.dto";
+import { GameRoomDTO } from "../dto/game-room.dto";
+import { GyroDTO } from "../dto/gyro.dto";
 
 @ApiTags("Game Room Operations")
 @Controller("rooms")
@@ -31,7 +32,8 @@ export class GameRoomController {
     const currentGyro = room.getCurrentGyro();
     return {
       id: room.id,
-      clientId: room.clientId,
+      hostId: room.hostId,
+      guestId: room.guestId,
       createdAt: room.createdAt,
       pitchHolderId: room.getGyroHolder(GyroAxis.Pitch),
       rollHolderId: room.getGyroHolder(GyroAxis.Roll),
@@ -43,42 +45,33 @@ export class GameRoomController {
     };
   }
 
-  @Post(":roomId/close")
-  async closeRoom(
+  @Post(":roomId/join")
+  async joinRoom(
     @Param("roomId") roomId: string, //
     @Headers("game-client-id") clientId: string
   ) {
-    await this.gameRoomSrv.closeRoom(clientId, roomId);
+    await this.gameRoomSrv.joinRoom(clientId, roomId);
   }
 
-  @Post(":roomId/release/:axis")
-  @ApiParam({ name: "axis", enum: GyroAxis })
-  async releaseGyro(
+  @Post(":roomId/leave")
+  async leaveRoom(
     @Param("roomId") roomId: string, //
-    @Param("axis") axis: GyroAxis,
     @Headers("game-client-id") clientId: string
   ) {
-    await this.gameRoomSrv.releaseGyro(clientId, roomId, axis);
+    await this.gameRoomSrv.leaveRoom(clientId, roomId);
   }
 
-  @Post(":roomId/join/:axis")
-  @ApiParam({ name: "axis", enum: GyroAxis })
-  async joinGyro(
-    @Param("roomId") roomId: string, //
-    @Param("axis") axis: GyroAxis,
-    @Headers("game-controller-id") controllerId: string
-  ) {
-    await this.gameRoomSrv.joinGyro(controllerId, roomId, axis);
-  }
-
-  @Post(":roomId/leave/:axis")
-  @ApiParam({ name: "axis", enum: GyroAxis })
-  async leaveGyro(
-    @Param("roomId") roomId: string, //
-    @Param("axis") axis: GyroAxis,
-    @Headers("game-controller-id") controllerId: string
-  ) {
-    await this.gameRoomSrv.leaveGyro(controllerId, roomId, axis);
+  @Get(":roomId/gyro")
+  @ApiOkResponse({ type: GyroDTO })
+  async getCurrentGyro(
+    @Param("roomId") roomId: string //
+  ): Promise<GyroDTO> {
+    const gyro = await this.gameRoomSrv.getCurrentGyro(roomId);
+    return {
+      pitch: gyro.pitch,
+      yaw: gyro.yaw,
+      roll: gyro.roll,
+    };
   }
 
   @Post(":roomId/gyro")
@@ -90,16 +83,41 @@ export class GameRoomController {
     await this.gameRoomSrv.updateGyro(controllerId, roomId, gyroData);
   }
 
-  @Get(":roomId/gyro")
-  @ApiOkResponse({ type: GyroDTO })
-  async getGyro(
-    @Param("roomId") roomId: string //
-  ): Promise<GyroDTO> {
-    const gyro = await this.gameRoomSrv.getCurrentGyro(roomId);
-    return {
-      pitch: gyro.pitch,
-      yaw: gyro.yaw,
-      roll: gyro.roll,
-    };
+  @Post(":roomId/gyro/join/:axis")
+  @ApiParam({ name: "axis", enum: GyroAxis })
+  async joinGyro(
+    @Param("roomId") roomId: string, //
+    @Param("axis") axis: GyroAxis,
+    @Headers("game-controller-id") controllerId: string
+  ) {
+    await this.gameRoomSrv.joinGyro(controllerId, roomId, axis);
+  }
+
+  @Post(":roomId/gyro/release/:axis")
+  @ApiParam({ name: "axis", enum: GyroAxis })
+  async releaseGyro(
+    @Param("roomId") roomId: string, //
+    @Param("axis") axis: GyroAxis,
+    @Headers("game-client-id") clientId: string
+  ) {
+    await this.gameRoomSrv.releaseGyro(clientId, roomId, axis);
+  }
+
+  @Get(":roomId/code")
+  @ApiOkResponse({ type: String })
+  async getShortCode(
+    @Param("roomId") roomId: string, //
+    @Headers("game-client-id") clientId: string
+  ): Promise<string> {
+    return await this.gameRoomSrv.getShortCode(clientId, roomId);
+  }
+
+  @Post("code/:shortCode/join")
+  @ApiOkResponse({ type: String })
+  async joinRoomByShortCode(
+    @Param("shortCode") shortCode: string, //
+    @Headers("game-client-id") clientId: string
+  ) {
+    return await this.gameRoomSrv.joinRoomByShortCode(clientId, shortCode);
   }
 }
