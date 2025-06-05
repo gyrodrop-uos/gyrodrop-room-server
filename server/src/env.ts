@@ -4,6 +4,7 @@ import * as z from "zod";
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production"]).default("development"),
   TURN_SECRET: z.string(),
+  CLIENT_VERSION_JSON_PATH: z.string(),
 });
 
 export type Env = z.infer<typeof envSchema>;

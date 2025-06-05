@@ -1,13 +1,16 @@
-import { GameRoomRepository, ShortCodeRepository } from "@/interfaces/repositories";
+import { ClientVersionRepository, GameRoomRepository, ShortCodeRepository } from "@/interfaces/repositories";
 
+import { ClientVersionJsonRepository } from "@/repositories/client-version-json.repository";
 import { GameRoomInMemoryRepository } from "@/repositories/game-room-in-memory.repository";
 import { ShortCodeBase62InMemoryRepository } from "@/repositories/short-code-base62-in-memory.repository";
+import { ClientVersionService } from "@/services/client-version.service";
 import { GameRoomService } from "@/services/game-room.service";
 import { WebRTCSignalingService } from "@/services/webrtc-signaling.service";
 
-import { Module } from "@nestjs/common";
 import { getEnv } from "@/env";
+import { Module } from "@nestjs/common";
 
+import { ClientVersionController } from "./controllers/client-version.controller";
 import { GameRoomController } from "./controllers/game-room.controller";
 import { GameRoomGateway } from "./gateways/game-room.gateway";
 import { WebRTCSignalingGateway } from "./gateways/webrtc-signaling.gateway";
@@ -22,6 +25,10 @@ type CustomProvider<T> = {
 // ================================
 const gameRoomRepo: GameRoomRepository = new GameRoomInMemoryRepository();
 const shortCodeRepo: ShortCodeRepository = new ShortCodeBase62InMemoryRepository();
+const clientVersionRepo: ClientVersionRepository = new ClientVersionJsonRepository(
+  getEnv().CLIENT_VERSION_JSON_PATH,
+  1000 * 60 // 1 minute cache TTL
+);
 
 // ===================================
 // Service Layer Dependency Injection
@@ -40,12 +47,19 @@ const webrtcSignalingProvider: CustomProvider<WebRTCSignalingService> = {
     turnSecret: getEnv().TURN_SECRET,
   }),
 };
+const clientVersionProvider: CustomProvider<ClientVersionService> = {
+  provide: "ClientVersionService",
+  useValue: new ClientVersionService({
+    clientVersionRepo,
+  }),
+};
 
 @Module({
-  controllers: [GameRoomController],
+  controllers: [GameRoomController, ClientVersionController],
   providers: [
     gameRoomProvider, //
     webrtcSignalingProvider,
+    clientVersionProvider,
     GameRoomGateway,
     WebRTCSignalingGateway,
   ],
