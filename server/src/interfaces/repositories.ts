@@ -29,3 +29,14 @@ export interface ShortCodeRepository {
   getByCode(code: string): Promise<string>;
   delete(code: string): Promise<void>;
 }
+
+/**
+ * Version Repository
+ */
+export interface ClientVersionRepository {
+  getLatest(): Promise<string>;
+  getMinimum(): Promise<string>;
+
+  setLatest(version: string): Promise<void>;
+  setMinimum(version: string): Promise<void>;
+}

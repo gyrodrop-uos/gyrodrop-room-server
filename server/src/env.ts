@@ -1,8 +1,13 @@
 import * as dotenv from "dotenv";
+import * as z from "zod";
 
-export type Env = {
-  TURN_SECRET: string;
-};
+const envSchema = z.object({
+  NODE_ENV: z.enum(["development", "production"]).default("development"),
+  TURN_SECRET: z.string(),
+  CLIENT_VERSION_JSON_PATH: z.string(),
+});
+
+export type Env = z.infer<typeof envSchema>;
 
 let _cachedEnv: Env | null = null;
 
@@ -12,14 +17,17 @@ export const getEnv = (): Env => {
       override: false,
     });
 
-    const TURN_SECRET = process.env.TURN_SECRET;
-    if (!TURN_SECRET) {
-      throw new Error("TURN_SECRET must be set in the environment variables.");
+    try {
+      const env = envSchema.parse(process.env);
+      _cachedEnv = env;
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        for (const error of err.errors) {
+          throw new Error(`Environment variable error: ${error.path.join(".")} - ${error.message}`);
+        }
+      }
+      throw err;
     }
-
-    _cachedEnv = {
-      TURN_SECRET,
-    };
   }
 
   return _cachedEnv;
