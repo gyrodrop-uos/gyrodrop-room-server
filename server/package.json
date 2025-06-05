@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "build": "ts-patch install -s && tsc",
-    "dev": "nodemon --watch 'src/**/*.ts' --exec ts-node -r tsconfig-paths/register src/main.ts"
+    "dev": "nodemon --watch 'src/**/*.ts' --watch '.env' --exec ts-node -r tsconfig-paths/register src/main.ts"
   },
   "author": "",
   "license": "ISC",
