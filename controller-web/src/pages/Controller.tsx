@@ -85,7 +85,11 @@ export const Controller = () => {
         </button>
         <button
           onClick={() => {
-            console.log(getGyroLog());
+            let log = "timestamp,pitch,yaw,roll\n";
+            getGyroLog().forEach((entry) => {
+              log += `${entry.timestamp},${entry.pitch},${entry.yaw},${entry.roll}\n`;
+            });
+            console.log(log);
           }}
         >
           Get Gyro Log
