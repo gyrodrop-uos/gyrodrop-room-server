@@ -126,6 +126,8 @@ export class GameRoomConnection {
 const gameRoomServerUrl = import.meta.env.VITE_ROOM_SERVER_URL;
 const gameRoomApiClient: GameRoomApiClient = new GameRoomApiClientHybrid(gameRoomServerUrl);
 
+export const getGyroLog = () => (gameRoomApiClient as GameRoomApiClientHybrid).getGyroLog();
+
 export function createGameRoomConnection(
   roomId: string, //
   controllerId: string,

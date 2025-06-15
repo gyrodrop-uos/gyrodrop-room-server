@@ -6,6 +6,13 @@ export class GameRoomApiClientHybrid implements GameRoomApiClient {
   private readonly _backendUrl: string;
   private readonly _socket: Socket;
 
+  private _gyroLog: {
+    timestamp: number;
+    pitch: number;
+    yaw: number;
+    roll: number;
+  }[] = [];
+
   constructor(backendUrl: string) {
     this._backendUrl = backendUrl;
     this._socket = io(backendUrl);
@@ -51,9 +58,21 @@ export class GameRoomApiClientHybrid implements GameRoomApiClient {
           roll: gyro.roll,
         },
       });
+
+      // Log the gyro update
+      this._gyroLog.push({
+        timestamp: Date.now(),
+        pitch: gyro.pitch,
+        yaw: gyro.yaw,
+        roll: gyro.roll,
+      });
     } catch (error) {
       throw new GameRoomError("GameRoomUnknownError", `Failed to update gyro: ${(error as Error).message}`);
     }
+  }
+
+  public getGyroLog() {
+    return this._gyroLog;
   }
 
   public async getCurrentGyro(roomId: string): Promise<Gyro> {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router";
 
-import { createGameRoomConnection, GameRoomEvent } from "../features/game-room/connection";
+import { createGameRoomConnection, GameRoomEvent, getGyroLog } from "../features/game-room/connection";
 import { createGyroController } from "../features/gyro/utils";
 
 import { whoami } from "../features/whoami";
@@ -82,6 +82,13 @@ export const Controller = () => {
           disabled={gameRoomEvent?.state !== "joined" || !!gyroInterval}
         >
           Activate Gyro
+        </button>
+        <button
+          onClick={() => {
+            console.log(getGyroLog());
+          }}
+        >
+          Get Gyro Log
         </button>
       </div>
     </div>
